@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: fms_core
+  profiles:
+    active: dev
+  cloud:
+    config:
+      profile: dev
+      enabled: true
+  config:
+    import: optional:configserver:http://localhost:8888

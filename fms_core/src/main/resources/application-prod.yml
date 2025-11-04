@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: efms_core
+  cloud:
+    config:
+      profile: dev
+      enabled: false
+    discovery:
+      enabled: true
+
+  datasource:
+    url: jdbc:mysql://192.168.2.61:3306/efms?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root
+    password: Password@123
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: none # Disables automatic schema creation or updates
+#    show-sql: true # Logs SQL queries to the console for debugging
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect # Use MySQL 8 dialect
+    open-in-view: false # Disable Open Session in View to avoid potential performance issues
+  config:
+    import: optional:configserver:http://192.168.2.61:8888
+
+
+
+
+
+server:
+  port: 8084
+  servlet:
+    context-path: /efms-core-service
+
+#logging:
+#  level:
+#    org.springframework.jdbc: DEBUG
+#    org.hibernate: DEBUG
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://192.168.2.61:8761/eureka/
+  instance:
+    prefer-ip-address: true

@@ -1,0 +1,12 @@
+package net.epic.efms_core.util.mapping;
+
+/**
+ * @author Buddhima Aushan
+ * @version 1.0.0
+ * @package net.epic.efms_core.util.mapping
+ * @since 2025-04-24
+ */
+public interface RuleMapper {
+
+    
+}

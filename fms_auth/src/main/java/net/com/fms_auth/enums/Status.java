@@ -1,0 +1,52 @@
+/**
+ * ALL RIGHT RESERVED By kavinda_d
+ *
+ * @AUTHOR : kavinda_d
+ * @PROJECT : fms backend
+ */
+package net.com.fms_auth.enums;
+public enum Status {
+    ACTIVE,
+    INACTIVE,
+    SUSPENDED,
+    VERIFIED,
+    UNVERIFIED,
+    LOCKED,
+    DEACTIVATED,
+    FROZEN,
+    CLOSED,
+    PENDING,
+    LIMITED,
+    SUCCESS,
+    FAILED,
+    CANCELLED,
+    REFUNDED,
+    REVERSED,
+    ON_HOLD,
+    APPLIED,
+    APPROVED,
+    REJECTED,
+    DISBURSED,
+    ONGOING,
+    DEFAULTED,
+    COMPLETED,
+    DISPUTED,
+    ENABLED,
+    DISABLED,
+    UNDER_MAINTENANCE,
+    DEPRECATED,
+    KYC_PENDING,
+    KYC_VERIFIED,
+    KYC_REJECTED,
+    KYC_EXPIRED,
+    KYC_SUSPENDED,
+    SENT,
+    READ,
+    UNREAD,
+    ARCHIVED,
+    UNDER_REVIEW,
+    ESCALATED,
+    SETTLED,
+    PARTIALLY_PAID,
+    CHARGEBACK
+}

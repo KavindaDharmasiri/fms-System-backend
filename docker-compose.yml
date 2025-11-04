@@ -1,0 +1,109 @@
+version: "3.8"
+services:
+
+  config-service:
+    container_name: config-server
+    build:
+      context: ./efms_config
+      dockerfile: Dockerfile
+    image: config-service:config-service-1.0.0
+    ports:
+      - "8888:8888"
+#    environment:
+#      SPRING_PROFILES_ACTIVE: prod
+    networks:
+      micro_network:
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+
+  discovery-service:
+    container_name: discovery-server
+    build:
+      context: ./efms_discovery
+      dockerfile: Dockerfile
+    image: discovery-service:discovery-service-1.0.0
+    ports:
+      - "8761:8761"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+
+    depends_on:
+      - config-service
+    networks:
+      micro_network:
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+
+  gateway-service:
+    container_name: gateway-server
+    build:
+      context: ./efms_gateway
+      dockerfile: Dockerfile
+    image: gateway-service:gateway-service-1.0.0
+    ports:
+      - "8765:8765"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+
+    depends_on:
+      - config-service
+    networks:
+      micro_network:
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+
+  core-service:
+    container_name: core-server
+    build:
+      context: ./efms_core
+      dockerfile: Dockerfile
+    image: core-service:core-service-1.0.0
+    ports:
+      - "8084:8084"
+    environment:
+#      SPRING_CLOUD_CONFIG_URI: http://config-service:8888
+#      SPRING_PROFILES_ACTIVE: dev
+      SPRING_PROFILES_ACTIVE: prod
+
+    depends_on:
+      - config-service
+    networks:
+      micro_network:
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  auth-service:
+    container_name: auth-server
+    build:
+      context: ./efms_auth
+      dockerfile: Dockerfile
+    image: auth-service:auth-service-1.0.0
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+
+    depends_on:
+      - config-service
+    networks:
+      micro_network:
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+
+networks:
+  micro_network:
+    driver: bridge

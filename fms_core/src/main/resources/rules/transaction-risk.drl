@@ -1,0 +1,39 @@
+package rules;
+
+import com.epic.rules.model.Transaction;
+
+rule "High-Risk Transaction - Large Amount"
+when
+    $t : Transaction(amount > 10000, customerRiskScore > 7)
+then
+    $t.setRiskLevel("HIGH");
+    $t.setFlaggedForReview(true);
+    System.out.println("Transaction flagged as HIGH RISK due to large amount and high customer risk score.");
+end
+
+rule "High-Risk Transaction - Unusual Location"
+when
+    $t : Transaction(location == "Unknown", customerRiskScore > 5)
+then
+    $t.setRiskLevel("HIGH");
+    $t.setFlaggedForReview(true);
+    System.out.println("Transaction flagged as HIGH RISK due to unknown location.");
+end
+
+rule "Medium-Risk Transaction - Frequent Transactions"
+when
+    $t : Transaction(frequency > 5, customerRiskScore > 4)
+then
+    $t.setRiskLevel("MEDIUM");
+    $t.setFlaggedForReview(true);
+    System.out.println("Transaction flagged as MEDIUM RISK due to high transaction frequency.");
+end
+
+rule "Low-Risk Transaction"
+when
+    $t : Transaction(amount < 1000, customerRiskScore < 3, frequency < 2)
+then
+    $t.setRiskLevel("LOW");
+    $t.setFlaggedForReview(false);
+    System.out.println("Transaction marked as LOW RISK.");
+end

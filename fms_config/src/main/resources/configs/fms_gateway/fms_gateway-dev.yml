@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: fms_gateway
+  cloud:
+    discovery:
+      enabled: true
+    gateway:
+      routes:
+        - id: fms_core
+          uri: http://localhost:8084
+          predicates:
+            - Path=/fms-core-service/**
+
+server:
+  port: 8765
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    instance:
+      prefer-ip-address: true
+
+logging:
+  level:
+    org.springframework.cloud.config: DEBUG
+    org.springframework.cloud.bootstrap: DEBUG

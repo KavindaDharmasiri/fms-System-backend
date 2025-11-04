@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: fms_config
+  cloud:
+    config:
+      server:
+        native:
+          searchLocations: classpath:configs/,classpath:configs/{application}
+  profiles:
+    active: native # Use the "native" profile for local file-based configurations
+
+server:
+  port: 8888
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
