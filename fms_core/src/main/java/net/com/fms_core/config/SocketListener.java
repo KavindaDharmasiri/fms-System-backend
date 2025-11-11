@@ -67,21 +67,26 @@ public class SocketListener implements CommandLineRunner {
     public String handleMessage(String message) {
         try{
             log.info("Received packet: {}", message);
-            System.out.println("message buffer1:" + message);
+            log.info("Message length: {}", message.length());
+            
             byte[] packetBytes = ISOUtil.hex2byte(message);
-            System.out.println("message buffer3:" + packetBytes);
+            log.info("Packet bytes length: {}", packetBytes.length);
+            log.info("First 20 bytes: {}", ISOUtil.hexString(packetBytes, 0, Math.min(20, packetBytes.length)));
+            
             ClassPathResource resource = new ClassPathResource("isoXML/visapack.xml");
             InputStream is = resource.getInputStream();
-            GenericPackager packager;
-            packager  = new GenericPackager(is);
+            GenericPackager packager = new GenericPackager(is);
+            
             ISOMsg m = new ISOMsg();
             m.setPackager(packager);
             m.unpack(packetBytes);
+            
             IsoMessageDTO isoMessageDTO = SocketMethods.mapToDto(m);
             riskController.executeTransactions(isoMessageDTO);
-            System.out.println(isoMessageDTO.toString());
+            log.info("Processed message: {}", isoMessageDTO.toString());
             return "fms Core Service received: " + message;
         } catch (Exception e) {
+            log.error("Error processing message: {}", e.getMessage(), e);
             throw new RuntimeException(e);
         }
     }

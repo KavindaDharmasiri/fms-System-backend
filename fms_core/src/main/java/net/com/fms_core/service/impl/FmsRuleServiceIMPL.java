@@ -54,6 +54,7 @@ public class FmsRuleServiceIMPL implements FmsRuleService {
     private PaymentNetworkRepository paymentNetworkRepository;
     @Override
     public FmsRuleDTO saveRule(FmsRuleDTO FmsRuleDTO) {
+        System.out.println(FmsRuleDTO.toString());
         try {
             FmsRule FmsRule = FmsRuleMapper.mapFmsRuleDTOToFmsRuleForSave(FmsRuleDTO);
             Collection<FmsRuleCondition> FmsRuleConditions = FmsRule.getFmsRuleConditionCollection();
