@@ -5,6 +5,7 @@
  * @PROJECT : fms backend
  */
 package net.com.fms_core.service.impl;
+import net.com.fms_core.aspect.Auditable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -53,6 +54,7 @@ public class FmsRuleServiceIMPL implements FmsRuleService {
     @Autowired
     private PaymentNetworkRepository paymentNetworkRepository;
     @Override
+    @Auditable(action = "CREATE_RULE", entityType = "FMS_RULE")
     public FmsRuleDTO saveRule(FmsRuleDTO FmsRuleDTO) {
         System.out.println(FmsRuleDTO.toString());
         try {
@@ -92,6 +94,7 @@ public class FmsRuleServiceIMPL implements FmsRuleService {
         }
     }
     @Override
+    @Auditable(action = "UPDATE_RULE", entityType = "FMS_RULE")
     public FmsRuleDTO updateRule(FmsRuleDTO FmsRuleDTO) {
         try {
             FmsRuleConditionRepository.removeAllByfmsRuleId_fmsRuleId(FmsRuleDTO.getFmsRuleId());
