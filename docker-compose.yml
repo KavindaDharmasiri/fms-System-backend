@@ -140,6 +140,21 @@ services:
     networks:
       micro_network:
 
+  logstash:
+    container_name: logstash
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    ports:
+      - "5044:5044"
+      - "9600:9600"
+    volumes:
+      - ../monitoring/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    environment:
+      - "LS_JAVA_OPTS=-Xmx512m -Xms512m"
+    depends_on:
+      - elasticsearch
+    networks:
+      micro_network:
+
   kibana:
     container_name: kibana
     image: docker.elastic.co/kibana/kibana:8.11.0

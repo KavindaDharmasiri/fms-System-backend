@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.com.fms_core.entity.AuditLog;
 import net.com.fms_core.repository.AuditLogRepository;
 import net.com.fms_core.service.AuditService;
+import net.com.fms_core.monitoring.LoggingUtil;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
@@ -42,6 +43,9 @@ public class AuditServiceImpl implements AuditService {
             auditLog.setStatus(status);
             auditLog.setErrorMessage(errorMessage);
             auditLog.setRequestId(UUID.randomUUID().toString());
+            
+            // Add structured logging
+            LoggingUtil.logAuditEvent(action, entityType, entityId);
             
             auditLogRepository.save(auditLog);
         } catch (Exception e) {
