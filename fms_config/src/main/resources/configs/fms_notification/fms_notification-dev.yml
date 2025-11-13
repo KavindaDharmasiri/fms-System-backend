@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: fms_notification
+  profiles:
+    active: dev
+  datasource:
+    url: jdbc:mysql://localhost:3306/fms?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root
+    password: root1234
+    driverClassName: "com.mysql.cj.jdbc.Driver"
+    jpa:
+      hibernate:
+        ddl-auto: update # Disables automatic schema creation or updates
+      #      show-sql: true # Logs SQL queries to the console for debugging
+      properties:
+        hibernate:
+          dialect: org.hibernate.dialect.MySQL8Dialect # Use MySQL 8 dialect
+      open-in-view: false # Disable Open Session in View to avoid potential performance issues
+
+server:
+  port: 8086
+  servlet:
+    context-path: /fms-notification-service
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+logging:
+  level:
+    net.com.fms_notification: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"

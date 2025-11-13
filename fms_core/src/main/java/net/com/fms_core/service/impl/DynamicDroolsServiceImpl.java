@@ -8,6 +8,8 @@ package net.com.fms_core.service.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import net.com.fms_core.client.NotificationClient;
 import net.com.fms_core.controller.TransactionController;
 import net.com.fms_core.dto.RiskManagement.Transaction;
 import net.com.fms_core.dto.TransactionEvaluationResult;
@@ -30,6 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service("dynamicDroolsService")
 @RequiredArgsConstructor
 public class DynamicDroolsServiceImpl implements DynamicDroolsService {
@@ -38,6 +41,7 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
     private final TransactionRepository transactionHistoryRepository;
     private final TransactionController transactionController;
     private final RiskMetrixRepository riskMetrixRepository;
+    private final NotificationClient notificationClient;
     @Override
     public KieBase loadRulesFromStringList(List<String> rules) {
         try {
@@ -144,6 +148,9 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
             System.out.println(evaluatedTxn.getRiskScore());
             RiskMetrix byRiskValue = riskMetrixRepository.findByRiskValue(evaluatedTxn.getRiskScore());
             evaluatedTxn.setRiskLevel(byRiskValue.getFlag());
+            if(!byRiskValue.getFlag().equals("LOW")){
+                sendRiskNotification(evaluatedTxn, byRiskValue.getFlag());
+            }
             System.out.println("Saving transaction history...");
             TransactionHistory transactionHistory = new TransactionHistory();
             transactionHistory.setCreatedBy("admin");
@@ -157,6 +164,27 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
             e.printStackTrace();
         }
     }
+
+    private void sendRiskNotification(IsoMessageDTO transaction, String riskScore) {
+        try {
+            String transactionId = String.valueOf(transaction.getStan());
+            String amount = String.valueOf(transaction.getAmount());
+            String cardNumber = transaction.getPan();
+
+            if (riskScore.equals("HIGH")) {
+                // High risk - immediate notification
+                notificationClient.sendHighRiskAlert(transactionId, String.valueOf(riskScore), amount, cardNumber);
+                log.warn("HIGH RISK transaction detected: ID={}, Score={}", transactionId, riskScore);
+            } else if (riskScore.equals("MID")) {
+                // Medium risk - notification for review
+                notificationClient.sendMediumRiskAlert(transactionId, String.valueOf(riskScore), amount, cardNumber);
+                log.info("MEDIUM RISK transaction detected: ID={}, Score={}", transactionId, riskScore);
+            }
+        } catch (Exception e) {
+            log.error("Failed to send risk notification: {}", e.getMessage());
+        }
+    }
+
     public String getDtoAsJson(IsoMessageDTO evaluatedTxn) {
         try {
             ObjectMapper mapper = new ObjectMapper();

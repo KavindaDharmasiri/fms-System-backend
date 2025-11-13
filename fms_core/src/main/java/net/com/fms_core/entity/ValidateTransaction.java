@@ -19,9 +19,14 @@ import java.sql.Timestamp;
 public class ValidateTransaction {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "validate_transaction_id")
     private Integer validateTransactionId;
+    @Column(name = "is_valid")
     private Boolean isValid;
+    @Column(name = "error_message")
     private String errorMessage;
+    @Column(name = "iso_message", columnDefinition = "TEXT")
     private String isoMessage;
+    @Column(name = "transaction_time")
     private Timestamp transactionTime;
 }

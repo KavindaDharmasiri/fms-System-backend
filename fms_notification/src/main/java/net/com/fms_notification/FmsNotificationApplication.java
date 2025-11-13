@@ -1,11 +1,11 @@
-package net.com.fms_gateway;
+package net.com.fms_notification;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class FmsGatewayApplication {
+public class FmsNotificationApplication {
     public static void main(String[] args) {
-        SpringApplication.run(FmsGatewayApplication.class, args);
+        SpringApplication.run(FmsNotificationApplication.class, args);
     }
 }

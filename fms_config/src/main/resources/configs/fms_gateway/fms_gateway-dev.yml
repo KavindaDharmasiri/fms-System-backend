@@ -10,6 +10,10 @@ spring:
           uri: http://localhost:8084
           predicates:
             - Path=/fms-core-service/**
+        - id: fms_notification
+          uri: http://localhost:8086
+          predicates:
+            - Path=/api/v1/notifications/**
 
 server:
   port: 8765

@@ -102,6 +102,25 @@ services:
         limits:
           memory: 512M
 
+  notification-service:
+    container_name: notification-server
+    build:
+      context: ./fms_notification
+      dockerfile: Dockerfile
+    image: notification-service:notification-service-1.0.0
+    ports:
+      - "8086:8086"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+    depends_on:
+      - discovery-service
+    networks:
+      micro_network:
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
   prometheus:
     container_name: prometheus
     image: prom/prometheus:latest

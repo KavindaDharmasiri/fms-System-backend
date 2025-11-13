@@ -4,12 +4,11 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>net.epic</groupId>
-		<artifactId>efms</artifactId>
-		<version>1.0.0</version>
-<!--		<relativePath/> &lt;!&ndash; lookup parent from repository &ndash;&gt;-->
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>3.4.4</version>
+		<relativePath/>
 	</parent>
-
 
 	<groupId>net.com</groupId>
 	<artifactId>fms_gateway</artifactId>
