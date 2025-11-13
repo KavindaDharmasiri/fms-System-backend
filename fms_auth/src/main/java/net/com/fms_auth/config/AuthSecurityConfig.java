@@ -36,7 +36,7 @@ public class AuthSecurityConfig {
     private final AuthenticationProvider authenticationProvider;
     private final LogOutHandler logOutHandler;
     private final TokenAuthenticationFilter tokenAuthenticationFilter;
-    private String[] permittedURL ={"/auth/login", "user/add-system-user","role/add-role"};
+    private String[] permittedURL ={"/auth/login", "user/add-system-user","role/add-role", "/actuator/**"};
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         return httpSecurity

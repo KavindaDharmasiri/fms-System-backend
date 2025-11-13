@@ -1,0 +1,20 @@
+CREATE TABLE audit_log (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    action VARCHAR(100) NOT NULL,
+    entity_type VARCHAR(100) NOT NULL,
+    entity_id VARCHAR(255),
+    old_values TEXT,
+    new_values TEXT,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    session_id VARCHAR(255),
+    timestamp DATETIME NOT NULL,
+    status VARCHAR(20),
+    error_message TEXT,
+    request_id VARCHAR(255),
+    INDEX idx_user_id (user_id),
+    INDEX idx_entity_type (entity_type),
+    INDEX idx_timestamp (timestamp),
+    INDEX idx_action (action)
+);
