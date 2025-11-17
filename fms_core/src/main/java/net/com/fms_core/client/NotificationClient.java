@@ -14,7 +14,7 @@ public class NotificationClient {
 
     private final RestTemplate restTemplate = new RestTemplate();
     
-    @Value("${notification.service.url:http://localhost:8086/fms-notification-service}")
+    @Value("${notification.service.url:http://localhost:8086}")
     private String notificationServiceUrl;
 
     public void sendHighRiskAlert(String transactionId, String riskScore, String amount, String cardNumber) {

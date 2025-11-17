@@ -26,7 +26,7 @@ public class NotificationService {
         try {
             // Save to database first
             Notification dbNotification = new Notification(
-                "system", // userId - could be extracted from context
+                "Kavinda Gimhan", // userId - could be extracted from context
                 notification.getRiskLevel() + " Risk Alert",
                 notification.getMessage(),
                 NotificationType.FRAUD_ALERT

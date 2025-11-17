@@ -88,10 +88,7 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
     }
     @Override
     public IsoMessageDTO evaluateTransaction(IsoMessageDTO transaction) {
-        System.out.println("getRulesCount(kieBase) = " + getRulesCount(kieBase));
-        System.out.println(transaction.getAmount());
         transaction.setRiskLevel("LOW");
-        System.out.println(transaction.getFiredRules());
         KieSession kieSession = kieBase.newKieSession();
         kieSession.addEventListener(new DefaultAgendaEventListener() {
             @Override
@@ -149,9 +146,8 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
             System.out.println(evaluatedTxn.getRiskScore());
             RiskMetrix byRiskValue = riskMetrixRepository.findByRiskValue(evaluatedTxn.getRiskScore());
             evaluatedTxn.setRiskLevel(byRiskValue.getFlag());
-            if(!byRiskValue.getFlag().equals("LOW")){
-                sendRiskNotification(evaluatedTxn, byRiskValue.getFlag());
-            }
+            sendRiskNotification(evaluatedTxn, byRiskValue.getFlag());
+
             System.out.println("Saving transaction history...");
             TransactionHistory transactionHistory = new TransactionHistory();
             transactionHistory.setCreatedBy("admin");
@@ -171,7 +167,8 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
             String transactionId = String.valueOf(transaction.getStan());
             String amount = String.valueOf(transaction.getAmount());
             String cardNumber = transaction.getPan();
-
+            System.out.println(riskScore);
+            System.out.println(riskScore.equals("MID"));
             if (riskScore.equals("HIGH")) {
                 // High risk - immediate notification
                 notificationClient.sendHighRiskAlert(transactionId, String.valueOf(riskScore), amount, cardNumber);

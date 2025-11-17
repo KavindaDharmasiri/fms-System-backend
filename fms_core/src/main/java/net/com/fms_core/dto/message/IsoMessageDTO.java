@@ -182,20 +182,67 @@ public class IsoMessageDTO {
     private String riskLevel;
     private String UUID;
     private String ruleName;
-    private int id;
-    private double riskScore;
-    private Date timestamp;
-    private boolean flaggedForReview;
-    private boolean ruleFired;
-    private String ruleGroup;
+    private List<String> firedRules = new ArrayList<>();
+    private boolean ruleFired = false;
+    private double riskScore = 0.0;
+    private Integer id;
+    private boolean flaggedForReview = false;
     private String paymentNetwork;
-    private String merchantCountryCode;
-    private String merchantName;
-    private List<RuleExecutionResult> firedRules = new ArrayList<>();
-    public void setFiredRule(String ruleName, String ruleGroup) {
-        RuleExecutionResult result = new RuleExecutionResult(ruleName, ruleGroup);
-        firedRules.add(result);
+    private Date timestamp;
+    
+    public void setFiredRule(String ruleName) {
+        this.firedRules.add(ruleName);
     }
-    public void setUUID(String tranUuid) {
+    
+    public void setFiredRule(String ruleName, String ruleDescription) {
+        this.firedRules.add(ruleName + ": " + ruleDescription);
+    }
+    
+    public void setRuleFired(boolean ruleFired) {
+        this.ruleFired = ruleFired;
+    }
+    
+    public boolean isRuleFired() {
+        return this.ruleFired;
+    }
+    
+    public double getRiskScore() {
+        return this.riskScore;
+    }
+    
+    public void setRiskScore(double riskScore) {
+        this.riskScore = riskScore;
+    }
+    
+    public Integer getId() {
+        return this.id;
+    }
+    
+    public void setId(Integer id) {
+        this.id = id;
+    }
+    
+    public boolean isFlaggedForReview() {
+        return this.flaggedForReview;
+    }
+    
+    public void setFlaggedForReview(boolean flaggedForReview) {
+        this.flaggedForReview = flaggedForReview;
+    }
+    
+    public String getPaymentNetwork() {
+        return this.paymentNetwork;
+    }
+    
+    public void setPaymentNetwork(String paymentNetwork) {
+        this.paymentNetwork = paymentNetwork;
+    }
+    
+    public Date getTimestamp() {
+        return this.timestamp;
+    }
+    
+    public void setTimestamp(Date timestamp) {
+        this.timestamp = timestamp;
     }
 }

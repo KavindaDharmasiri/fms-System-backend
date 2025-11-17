@@ -8,6 +8,7 @@ import net.com.fms_notification.repository.NotificationRepository;
 import net.com.fms_notification.service.NotificationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -55,8 +56,14 @@ public class NotificationController {
     }
 
     @PutMapping("/{id}/read")
+    @Transactional
     public ResponseEntity<Void> markAsRead(@PathVariable Long id) {
-        notificationRepository.updateStatus(id, NotificationStatus.READ);
-        return ResponseEntity.ok().build();
+        try {
+            notificationRepository.updateStatus(id, NotificationStatus.READ);
+            return ResponseEntity.ok().build();
+        }catch (Exception e){
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
     }
 }
