@@ -14,6 +14,7 @@ import org.jpos.iso.ISOMsg;
 import org.jpos.iso.ISOUtil;
 import org.jpos.iso.packager.GenericPackager;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 import java.io.*;
@@ -26,6 +27,7 @@ import java.net.Socket;
 public class SocketListener implements CommandLineRunner {
     private final RiskController riskController;
     private final SocketMethods SocketMethods;
+    private final ConfigurableApplicationContext applicationContext;
     int port = 5000;
     @Override
     public void run(String... args) {
@@ -66,6 +68,12 @@ public class SocketListener implements CommandLineRunner {
     }
     public String handleMessage(String message) {
         try{
+            // Check if application context is still active
+            if (!applicationContext.isActive()) {
+                log.warn("Application context is not active, skipping message processing");
+                return "Application shutting down";
+            }
+            
             log.info("Received packet: {}", message);
             log.info("Message length: {}", message.length());
             
@@ -86,8 +94,8 @@ public class SocketListener implements CommandLineRunner {
             log.info("Processed message: {}", isoMessageDTO.toString());
             return "fms Core Service received: " + message;
         } catch (Exception e) {
-            log.error("Error processing message: {}", e.getMessage(), e);
-            throw new RuntimeException(e);
+            log.error("Error processing message: {}", e.getMessage());
+            return "Error processing message: " + e.getMessage();
         }
     }
 }

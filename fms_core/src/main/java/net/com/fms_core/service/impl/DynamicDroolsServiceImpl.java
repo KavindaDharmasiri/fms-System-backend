@@ -89,6 +89,7 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
     @Override
     public IsoMessageDTO evaluateTransaction(IsoMessageDTO transaction) {
         System.out.println("getRulesCount(kieBase) = " + getRulesCount(kieBase));
+        System.out.println(transaction.getAmount());
         transaction.setRiskLevel("LOW");
         System.out.println(transaction.getFiredRules());
         KieSession kieSession = kieBase.newKieSession();
