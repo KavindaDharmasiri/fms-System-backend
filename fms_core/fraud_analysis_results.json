@@ -1,0 +1,9 @@
+{
+  "risk_score": 88.75623493055454,
+  "fraud_probability": 0.9796800622700264,
+  "distance_risk": 95,
+  "cluster_risk": 90,
+  "temporal_risk": 95,
+  "ml_risk": 68.78117465277268,
+  "is_impossible": "True"
+}

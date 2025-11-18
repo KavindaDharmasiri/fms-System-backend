@@ -19,6 +19,7 @@ import java.util.Map;
 @AllArgsConstructor
 public class ApiResponseDTO<T> {
     private boolean success;
+    private String message;
     private T data;
     private List<ErrorDetailDTO> errors;
     private Map<String, Object> metadata;

@@ -7,6 +7,7 @@
 package net.com.fms_core.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.com.fms_core.dto.ImpossibleDistanceResult;
 import net.com.fms_core.dto.RiskManagement.RuleA;
 import net.com.fms_core.dto.RiskManagement.RuleGroup;
 import net.com.fms_core.dto.RiskManagement.Transaction;
@@ -15,6 +16,7 @@ import net.com.fms_core.dto.message.IsoMessageDTO;
 import net.com.fms_core.dto.message.VisaField126DTO;
 import net.com.fms_core.dto.message.VisaField44DTO;
 import net.com.fms_core.service.DynamicDroolsService;
+import net.com.fms_core.service.ImpossibleDistanceService;
 import net.com.fms_core.service.MyAsyncService;
 import net.com.fms_core.service.ValidationService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,6 +40,7 @@ public class RiskController {
     private final DynamicDroolsService droolsService;
     private final MyAsyncService myAsyncService;
     private final ValidationService validationService;
+    private final ImpossibleDistanceService impossibleDistanceService;
     @GetMapping("/set-rule")
     public String setRules() {
         long startTime = System.currentTimeMillis();
@@ -103,23 +106,67 @@ public class RiskController {
         return "";
     }
     public String executeTransactions(IsoMessageDTO isoMessageDTO) {
-        List<IsoMessageDTO> transactionList =  new ArrayList<>();
+        List<IsoMessageDTO> transactionList = new ArrayList<>();
         isoMessageDTO.setTranId((int) isoMessageDTO.getStan());
         isoMessageDTO.setCustomerRiskScore(10);
+        
+        // 1. First validate transaction format
         ValidationResultDTO validationResultDTO = validationService.ValidateTransaction(isoMessageDTO);
-        if (validationResultDTO.isValid()) {
-            transactionList.add(isoMessageDTO);
-            long startTime = System.currentTimeMillis();
-            List<CompletableFuture<Void>> tasks = new ArrayList<>();
-            for (IsoMessageDTO txn1 : transactionList) {
-                tasks.add(myAsyncService.processTask(txn1));
-            }
-            CompletableFuture.allOf(tasks.toArray(new CompletableFuture[0])).join();
-            long endTime = System.currentTimeMillis();
-            long duration = endTime - startTime;
-            System.out.println("All Tasks completed. Execution time: " + duration + " milliseconds");
+        if (!validationResultDTO.isValid()) {
+            log.warn("Transaction validation failed: {}", validationResultDTO.getErrorMessages());
+            return "VALIDATION_FAILED";
         }
-        return "";
+        
+        // 2. Check impossible distance BEFORE rule execution
+        ImpossibleDistanceResult distanceResult = impossibleDistanceService.checkImpossibleDistance(isoMessageDTO);
+        
+        if (distanceResult.isImpossible()) {
+            log.error("IMPOSSIBLE DISTANCE DETECTED: {}", distanceResult.getAlertMessage());
+            log.error("Distance: {}km, Time: {}min, Required Speed: {}km/h", 
+                     distanceResult.getDistanceKm(), 
+                     distanceResult.getTimeDifferenceMinutes(), 
+                     distanceResult.getRequiredSpeedKmh());
+            
+            // Set high risk and block transaction
+            isoMessageDTO.setRiskLevel("HIGH");
+            isoMessageDTO.setRiskScore(100);
+            // Add to fired rules list
+            if (isoMessageDTO.getFiredRules() == null) {
+                isoMessageDTO.setFiredRules(new ArrayList<>());
+            }
+            isoMessageDTO.getFiredRules().add("IMPOSSIBLE_DISTANCE_RULE");
+            
+            // Save blocked transaction
+            droolsService.evaluateTransaction(isoMessageDTO);
+            return "BLOCKED_IMPOSSIBLE_DISTANCE";
+        }
+        log.info("Distance: {}km, Time: {}min, Required Speed: {}km/h",
+                 distanceResult.getDistanceKm(),
+                 distanceResult.getTimeDifferenceMinutes(),
+                 distanceResult.getRequiredSpeedKmh());
+
+        // 3. Apply additional risk scoring based on distance analysis
+        if ("HIGH".equals(distanceResult.getRiskLevel())) {
+            isoMessageDTO.setCustomerRiskScore(isoMessageDTO.getCustomerRiskScore() + 20);
+            log.warn("High distance risk detected: {}km in {}min", 
+                    distanceResult.getDistanceKm(), distanceResult.getTimeDifferenceMinutes());
+        } else if ("MID".equals(distanceResult.getRiskLevel())) {
+            isoMessageDTO.setCustomerRiskScore(isoMessageDTO.getCustomerRiskScore() + 10);
+        }
+        
+        // 4. Proceed with normal rule execution
+        transactionList.add(isoMessageDTO);
+        long startTime = System.currentTimeMillis();
+        List<CompletableFuture<Void>> tasks = new ArrayList<>();
+        for (IsoMessageDTO txn1 : transactionList) {
+            tasks.add(myAsyncService.processTask(txn1));
+        }
+        CompletableFuture.allOf(tasks.toArray(new CompletableFuture[0])).join();
+        long endTime = System.currentTimeMillis();
+        long duration = endTime - startTime;
+        System.out.println("All Tasks completed. Execution time: " + duration + " milliseconds");
+        
+        return "PROCESSED";
     }
     private boolean isAmountUnusual(String transactionAmount) {
         long amount = Long.parseLong(transactionAmount);
