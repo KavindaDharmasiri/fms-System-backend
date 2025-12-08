@@ -120,6 +120,22 @@ public class RiskController {
         // 2. Check impossible distance BEFORE rule execution
         ImpossibleDistanceResult distanceResult = impossibleDistanceService.checkImpossibleDistance(isoMessageDTO);
         
+        // Extract fraud percentage from distance analysis alert message
+        String alertMessage = distanceResult.getAlertMessage();
+        if (alertMessage != null && !alertMessage.contains("Normal travel pattern")) {
+            try {
+                String[] parts = alertMessage.split("Fraud Probability ");
+                if (parts.length > 1) {
+                    String percentPart = parts[1].split("%")[0];
+                    Double fraudPercentage = Double.parseDouble(percentPart);
+                    isoMessageDTO.setFraudPercentage(fraudPercentage);
+                    log.info("Fraud percentage set: {}%", fraudPercentage);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to parse fraud percentage from alert message: {}", e.getMessage());
+            }
+        }
+        
         if (distanceResult.isImpossible()) {
             log.error("IMPOSSIBLE DISTANCE DETECTED: {}", distanceResult.getAlertMessage());
             log.error("Distance: {}km, Time: {}min, Required Speed: {}km/h", 

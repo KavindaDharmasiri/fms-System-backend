@@ -8,7 +8,6 @@ import net.com.fms_core.dto.message.IsoMessageDTO;
 import net.com.fms_core.entity.TransactionHistory;
 import net.com.fms_core.repository.TransactionRepository;
 import net.com.fms_core.service.ImpossibleDistanceService;
-import net.com.fms_core.service.PythonIntegrationService;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -23,106 +22,90 @@ public class ImpossibleDistanceServiceImpl implements ImpossibleDistanceService 
     private final TransactionRepository transactionRepository;
     private final ObjectMapper objectMapper;
     private final PythonIntegrationService pythonIntegrationService;
-    
+    private final GeoService geoService;
+
     // Earth's radius in kilometers
     private static final double EARTH_RADIUS_KM = 6371.0;
-    
+
     @Override
     public ImpossibleDistanceResult checkImpossibleDistance(IsoMessageDTO currentTransaction) {
         try {
-            // Try MATLAB analysis first if available
-            if (pythonIntegrationService.isPythonAvailable()) {
-                log.info("Using MATLAB for enhanced geospatial analysis");
-                ImpossibleDistanceResult matlabResult = pythonIntegrationService.callPythonAnalysis(currentTransaction);
-                if (matlabResult != null && !"MATLAB unavailable".contains(matlabResult.getAlertMessage())) {
-                    return matlabResult;
-                }
-            }
-            
-            // Fallback to Java implementation
-            log.info("Using Java implementation for distance analysis");
+            log.info("Using Java + Python model for distance analysis");
+
             String cardNumber = currentTransaction.getPan();
             if (cardNumber == null || cardNumber.length() < 12) {
                 return createNoRiskResult("Invalid card number");
             }
-            
+
             // Get last transaction for same card within 24 hours
             List<TransactionHistory> recentTransactions = transactionRepository
-                .findRecentTransactionsByCardNumber(cardNumber.substring(0, 12), 24);
-            System.out.println(recentTransactions.size());
-            
+                    .findRecentTransactionsByCardNumber(cardNumber.substring(0, 12), 24);
+
             if (recentTransactions.isEmpty()) {
                 return createNoRiskResult("No previous transactions found");
             }
-            
+
             TransactionHistory lastTransaction = recentTransactions.get(0);
             IsoMessageDTO lastTxnData = parseTransactionPacket(lastTransaction.getTranPacket());
-            
             if (lastTxnData == null) {
                 return createNoRiskResult("Unable to parse previous transaction");
             }
-            
+
             // Extract location data
             LocationData currentLoc = extractLocation(currentTransaction);
             LocationData previousLoc = extractLocation(lastTxnData);
-
-            System.out.println(currentLoc.locationName);
-            System.out.println(currentLoc.latitude);
-            System.out.println(currentLoc.longitude);
-            System.out.println("------------------------");
-            System.out.println(previousLoc.locationName);
-            System.out.println(previousLoc.latitude);
-            System.out.println(previousLoc.longitude);
             if (currentLoc == null || previousLoc == null) {
                 return createNoRiskResult("Location data unavailable");
             }
-            
+
             // Calculate distance and time difference
-            double distance = calculateDistance(
-                previousLoc.latitude, previousLoc.longitude,
-                currentLoc.latitude, currentLoc.longitude
-            );
-            
-            // Convert Date to LocalDateTime for time calculation
+            double distance = calculateDistance(previousLoc.latitude, previousLoc.longitude,
+                    currentLoc.latitude, currentLoc.longitude);
+
             LocalDateTime lastTxnTime = lastTransaction.getCreatedAt().toInstant()
-                .atZone(java.time.ZoneId.systemDefault()).toLocalDateTime();
-            
-            long timeDiffMinutes = ChronoUnit.MINUTES.between(
-                lastTxnTime, LocalDateTime.now()
-            );
-            
-            if (timeDiffMinutes <= 0) {
-                timeDiffMinutes = 1; // Prevent division by zero
-            }
-            
-            // Calculate required speed
+                    .atZone(java.time.ZoneId.systemDefault()).toLocalDateTime();
+
+            long timeDiffMinutes = ChronoUnit.MINUTES.between(lastTxnTime, LocalDateTime.now());
+            if (timeDiffMinutes <= 0) timeDiffMinutes = 1;
+
             double requiredSpeedKmh = (distance / timeDiffMinutes) * 60;
-            
-            // Determine max possible speed based on context
             double maxPossibleSpeed = calculateMaxPossibleSpeed("COMMERCIAL_FLIGHT");
-            
-            // Check if travel is impossible
-            boolean isImpossible = isImpossibleTravel(distance, timeDiffMinutes, maxPossibleSpeed);
-            
+
+            // Java rule-based check
+            boolean isImpossibleJava = isImpossibleTravel(distance, timeDiffMinutes, maxPossibleSpeed);
+
+            // Call Python XGBoost model
+            double[] modelResult = pythonIntegrationService.predictImpossibleTransaction(distance, timeDiffMinutes, requiredSpeedKmh);
+            boolean isImpossibleByModel = modelResult[0] == 1;
+            double modelProbability = modelResult[1];
+
+            // Combine Java and Python results
+            boolean finalImpossible = isImpossibleJava || isImpossibleByModel;
+            String riskLevel = finalImpossible ? "HIGH" : (requiredSpeedKmh > 100 ? "MID" : "LOW");
+            String alertMessage = finalImpossible
+                    ? "IMPOSSIBLE DISTANCE: Card used in impossible timeframe (Model probability: " + modelProbability + ")"
+                    : "Normal travel pattern";
+
             return new ImpossibleDistanceResult(
-                isImpossible,
-                Math.round(distance * 100.0) / 100.0,
-                timeDiffMinutes,
-                Math.round(requiredSpeedKmh * 100.0) / 100.0,
-                maxPossibleSpeed,
-                isImpossible ? "HIGH" : (requiredSpeedKmh > 100 ? "MID" : "LOW"),
-                previousLoc.locationName,
-                currentLoc.locationName,
-                cardNumber.substring(0, 12) + "****",
-                isImpossible ? "IMPOSSIBLE DISTANCE: Card used in impossible timeframe" : "Normal travel pattern"
+                    finalImpossible,
+                    Math.round(distance * 100.0) / 100.0,
+                    timeDiffMinutes,
+                    Math.round(requiredSpeedKmh * 100.0) / 100.0,
+                    maxPossibleSpeed,
+                    riskLevel,
+                    previousLoc.locationName,
+                    currentLoc.locationName,
+                    cardNumber.substring(0, 12) + "****",
+                    alertMessage
             );
-            
+
         } catch (Exception e) {
             log.error("Error checking impossible distance: {}", e.getMessage());
             return createNoRiskResult("Error during distance check");
         }
     }
-    
+
+
     @Override
     public double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
         // Haversine formula for great-circle distance
@@ -166,18 +149,26 @@ public class ImpossibleDistanceServiceImpl implements ImpossibleDistanceService 
     
     private LocationData extractLocation(IsoMessageDTO transaction) {
         try {
-            // Extract from Field 43 - Card Acceptor Name/Location
-            String cardAcceptorNameLocation = transaction.getCardAcceptorNameLocation();
-            
-            if (cardAcceptorNameLocation != null && !cardAcceptorNameLocation.isEmpty()) {
-                return parseCardAcceptorLocation(cardAcceptorNameLocation);
+            String raw = transaction.getCardAcceptorNameLocation();
+
+            if (raw != null && !raw.trim().isEmpty()) {
+
+                // Call Python API through your integration service
+                double[] coords = geoService.getCoordinates(raw);
+
+                if (coords != null && coords.length == 2) {
+                    LocationData loc = new LocationData();
+                    loc.latitude = coords[0];
+                    loc.longitude = coords[1];
+                    loc.locationName = raw;
+                    return loc;
+                }
             }
-            
-            // Fallback: Generate location based on other fields
-            return generateLocationFromOtherFields(transaction);
-            
+
+            return generateDefaultLocation();
+
         } catch (Exception e) {
-            log.warn("Failed to extract location: {}", e.getMessage());
+            log.warn("Location extraction failed: {}", e.getMessage());
             return generateDefaultLocation();
         }
     }

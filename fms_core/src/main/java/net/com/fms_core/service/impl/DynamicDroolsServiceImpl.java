@@ -144,14 +144,32 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
     private void saveTranHistory(IsoMessageDTO evaluatedTxn) {
         try {
             System.out.println(evaluatedTxn.getRiskScore());
-            RiskMetrix byRiskValue = riskMetrixRepository.findByRiskValue(evaluatedTxn.getRiskScore());
-            evaluatedTxn.setRiskLevel(byRiskValue.getFlag());
-            sendRiskNotification(evaluatedTxn, byRiskValue.getFlag());
+            System.out.println(evaluatedTxn.getFraudPercentage());
+
+//            if (evaluatedTxn.getFraudPercentage() != null && evaluatedTxn.getFraudPercentage() > 80) {
+//                finalRiskLevel = "HIGH";
+//            } else if (evaluatedTxn.getFraudPercentage() != null && evaluatedTxn.getFraudPercentage() > 60) {
+//                finalRiskLevel = "MID";
+//            }
+
+            RiskMetrix byRiskValue = riskMetrixRepository.findByRiskValue(evaluatedTxn.getFraudPercentage());
+            
+            // Update risk level based on rules and distance analysis
+            String finalRiskLevel = byRiskValue.getFlag();
+            if (evaluatedTxn.getFraudPercentage() != null && evaluatedTxn.getFraudPercentage() > 80) {
+                finalRiskLevel = "HIGH";
+            } else if (evaluatedTxn.getFraudPercentage() != null && evaluatedTxn.getFraudPercentage() > 60) {
+                finalRiskLevel = "MID";
+            }
+            
+            evaluatedTxn.setRiskLevel(finalRiskLevel);
+            sendRiskNotification(evaluatedTxn, finalRiskLevel);
 
             System.out.println("Saving transaction history...");
             TransactionHistory transactionHistory = new TransactionHistory();
             transactionHistory.setCreatedBy("admin");
-            transactionHistory.setStatus(evaluatedTxn.getRiskLevel());
+            transactionHistory.setStatus(finalRiskLevel);
+            transactionHistory.setFraudPercentage(evaluatedTxn.getFraudPercentage());
             transactionHistory.setTranPacket(getDtoAsJson(evaluatedTxn));
             transactionHistory.setTranUuid(UUID.randomUUID().toString());
             transactionHistory.setUpdatedBy("admin");

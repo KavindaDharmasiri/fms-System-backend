@@ -189,6 +189,7 @@ public class IsoMessageDTO {
     private boolean flaggedForReview = false;
     private String paymentNetwork;
     private Date timestamp;
+    private Double fraudPercentage;
     
     public void setFiredRule(String ruleName) {
         this.firedRules.add(ruleName);
