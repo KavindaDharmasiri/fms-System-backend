@@ -188,6 +188,7 @@ public class IsoMessageDTO {
     private Integer id;
     private boolean flaggedForReview = false;
     private String paymentNetwork;
+    private String blockReason;
     private Date timestamp;
     private Double fraudPercentage;
     
@@ -245,5 +246,13 @@ public class IsoMessageDTO {
     
     public void setTimestamp(Date timestamp) {
         this.timestamp = timestamp;
+    }
+    
+    public Double getFraudPercentage() {
+        return this.fraudPercentage;
+    }
+    
+    public void setFraudPercentage(Double fraudPercentage) {
+        this.fraudPercentage = fraudPercentage;
     }
 }

@@ -101,6 +101,7 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
         int firedRules = kieSession.fireAllRules();
         System.out.println("Number of fired rules: " + firedRules);
         System.out.println(transaction.getFiredRules());
+        transaction.setBlockReason(transaction.getFiredRules().get(0).equals("IMPOSSIBLE_DISTANCE_RULE") ? "IMPOSSIBLE_DISTANCE" : "RULE_FIRED");
         kieSession.dispose();
         saveTranHistory(transaction);
         return transaction;
@@ -146,20 +147,22 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
             System.out.println(evaluatedTxn.getRiskScore());
             System.out.println(evaluatedTxn.getFraudPercentage());
 
-//            if (evaluatedTxn.getFraudPercentage() != null && evaluatedTxn.getFraudPercentage() > 80) {
-//                finalRiskLevel = "HIGH";
-//            } else if (evaluatedTxn.getFraudPercentage() != null && evaluatedTxn.getFraudPercentage() > 60) {
-//                finalRiskLevel = "MID";
-//            }
+            if (evaluatedTxn.getFraudPercentage() == null) {
+                evaluatedTxn.setFraudPercentage(0.0);
+            }
 
-            RiskMetrix byRiskValue = riskMetrixRepository.findByRiskValue(evaluatedTxn.getFraudPercentage());
+            // Keep risk level from rules if already set to HIGH
+            String finalRiskLevel = evaluatedTxn.getRiskLevel();
             
-            // Update risk level based on rules and distance analysis
-            String finalRiskLevel = byRiskValue.getFlag();
-            if (evaluatedTxn.getFraudPercentage() != null && evaluatedTxn.getFraudPercentage() > 80) {
+            // Only override if fraud percentage is significant
+            if (evaluatedTxn.getFraudPercentage() > 80) {
                 finalRiskLevel = "HIGH";
-            } else if (evaluatedTxn.getFraudPercentage() != null && evaluatedTxn.getFraudPercentage() > 60) {
+            } else if (evaluatedTxn.getFraudPercentage() > 60) {
                 finalRiskLevel = "MID";
+            } else if (finalRiskLevel == null || finalRiskLevel.equals("LOW")) {
+                // Use risk matrix only if no rule fired
+                RiskMetrix byRiskValue = riskMetrixRepository.findByRiskValue(evaluatedTxn.getFraudPercentage());
+                finalRiskLevel = byRiskValue != null ? byRiskValue.getFlag() : "LOW";
             }
             
             evaluatedTxn.setRiskLevel(finalRiskLevel);
@@ -170,9 +173,13 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
             transactionHistory.setCreatedBy("admin");
             transactionHistory.setStatus(finalRiskLevel);
             transactionHistory.setFraudPercentage(evaluatedTxn.getFraudPercentage());
+            
+
+            System.out.println(evaluatedTxn.getBlockReason());
             transactionHistory.setTranPacket(getDtoAsJson(evaluatedTxn));
             transactionHistory.setTranUuid(UUID.randomUUID().toString());
             transactionHistory.setUpdatedBy("admin");
+            transactionHistory.setBlockReason(evaluatedTxn.getBlockReason());
             TransactionHistory save = transactionHistoryRepository.save(transactionHistory);
             transactionController.publish(save);
         } catch (Exception e) {

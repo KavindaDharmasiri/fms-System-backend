@@ -31,37 +31,50 @@ public class ImpossibleDistanceServiceImpl implements ImpossibleDistanceService 
     public ImpossibleDistanceResult checkImpossibleDistance(IsoMessageDTO currentTransaction) {
         try {
             log.info("Using Java + Python model for distance analysis");
+            System.out.println("=== DISTANCE CHECK START ===");
 
             String cardNumber = currentTransaction.getPan();
+            System.out.println("Card number: " + (cardNumber != null ? cardNumber.substring(0, Math.min(12, cardNumber.length())) + "****" : "NULL"));
             if (cardNumber == null || cardNumber.length() < 12) {
+                System.out.println("EARLY EXIT: Invalid card number");
                 return createNoRiskResult("Invalid card number");
             }
 
             // Get last transaction for same card within 24 hours
-            List<TransactionHistory> recentTransactions = transactionRepository
-                    .findRecentTransactionsByCardNumber(cardNumber.substring(0, 12), 24);
+//            List<TransactionHistory> recentTransactions = transactionRepository
+//                    .findRecentTransactionsByCardNumber(cardNumber.substring(0, 12), 24);
+
+            List<TransactionHistory> recentTransactions = transactionRepository.findAllByOrderByTransactionHistoryIdDesc();
+            System.out.println("Recent transactions found: " + recentTransactions.size());
 
             if (recentTransactions.isEmpty()) {
+                System.out.println("EARLY EXIT: No previous transactions found");
                 return createNoRiskResult("No previous transactions found");
             }
 
             TransactionHistory lastTransaction = recentTransactions.get(0);
             IsoMessageDTO lastTxnData = parseTransactionPacket(lastTransaction.getTranPacket());
             if (lastTxnData == null) {
+                System.out.println("EARLY EXIT: Unable to parse previous transaction");
                 return createNoRiskResult("Unable to parse previous transaction");
             }
 
             // Extract location data
+            System.out.println("Extracting locations...");
             LocationData currentLoc = extractLocation(currentTransaction);
             LocationData previousLoc = extractLocation(lastTxnData);
             if (currentLoc == null || previousLoc == null) {
+                System.out.println("EARLY EXIT: Location data unavailable - current: " + currentLoc + ", previous: " + previousLoc);
                 return createNoRiskResult("Location data unavailable");
             }
+            System.out.println("///////////////////////////////////////////////");
+            System.out.println(currentLoc.toString());
+            System.out.println(previousLoc.toString());
 
             // Calculate distance and time difference
             double distance = calculateDistance(previousLoc.latitude, previousLoc.longitude,
                     currentLoc.latitude, currentLoc.longitude);
-
+            System.out.println(distance);
             LocalDateTime lastTxnTime = lastTransaction.getCreatedAt().toInstant()
                     .atZone(java.time.ZoneId.systemDefault()).toLocalDateTime();
 
@@ -86,6 +99,7 @@ public class ImpossibleDistanceServiceImpl implements ImpossibleDistanceService 
                     ? "IMPOSSIBLE DISTANCE: Card used in impossible timeframe (Model probability: " + modelProbability + ")"
                     : "Normal travel pattern";
 
+            System.out.println(alertMessage);
             return new ImpossibleDistanceResult(
                     finalImpossible,
                     Math.round(distance * 100.0) / 100.0,
@@ -345,13 +359,49 @@ public class ImpossibleDistanceServiceImpl implements ImpossibleDistanceService 
     }
     
     private LocationData geocodeLocation(String city, String country) {
-        // Simplified geocoding - in production, use Google Maps API or similar
+        // Try OpenStreetMap Nominatim API first
+        try {
+            String url = String.format(
+                "https://nominatim.openstreetmap.org/search?city=%s&country=%s&format=json&limit=1",
+                java.net.URLEncoder.encode(city, "UTF-8"),
+                java.net.URLEncoder.encode(country, "UTF-8")
+            );
+            
+            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+            restTemplate.getInterceptors().add((request, body, execution) -> {
+                request.getHeaders().add("User-Agent", "FMS-FraudDetection/1.0");
+                return execution.execute(request, body);
+            });
+            
+            String response = restTemplate.getForObject(url, String.class);
+            
+            if (response != null && !response.equals("[]")) {
+                com.fasterxml.jackson.databind.JsonNode jsonNode = objectMapper.readTree(response);
+                if (jsonNode.isArray() && jsonNode.size() > 0) {
+                    com.fasterxml.jackson.databind.JsonNode firstResult = jsonNode.get(0);
+                    LocationData location = new LocationData();
+                    location.latitude = firstResult.get("lat").asDouble();
+                    location.longitude = firstResult.get("lon").asDouble();
+                    location.locationName = city + ", " + country;
+                    log.info("Geocoded {}, {} to: {}, {}", city, country, location.latitude, location.longitude);
+                    return location;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Nominatim geocoding failed for {}, {}: {}", city, country, e.getMessage());
+        }
+        
+        // Fallback to hardcoded coordinates
         LocationData location = new LocationData();
         
         // Sample coordinates for major cities (replace with actual geocoding service)
         String key = (city + "_" + country).toUpperCase();
         
         switch (key) {
+            case "COLOMBO_LK":
+                location.latitude = 6.9271;
+                location.longitude = 79.8612;
+                break;
             case "NEW YORK_US":
                 location.latitude = 40.7128;
                 location.longitude = -74.0060;
@@ -392,11 +442,80 @@ public class ImpossibleDistanceServiceImpl implements ImpossibleDistanceService 
                 location.latitude = 55.7558;
                 location.longitude = 37.6176;
                 break;
+            case "BEIJING_CN":
+                location.latitude = 39.9042;
+                location.longitude = 116.4074;
+                break;
+            case "DELHI_IN":
+                location.latitude = 28.7041;
+                location.longitude = 77.1025;
+                break;
+            case "BANGKOK_TH":
+                location.latitude = 13.7563;
+                location.longitude = 100.5018;
+                break;
+            case "ISTANBUL_TR":
+                location.latitude = 41.0082;
+                location.longitude = 28.9784;
+                break;
+            case "TORONTO_CA":
+                location.latitude = 43.6532;
+                location.longitude = -79.3832;
+                break;
+            case "BERLIN_DE":
+                location.latitude = 52.5200;
+                location.longitude = 13.4050;
+                break;
+            case "MADRID_ES":
+                location.latitude = 40.4168;
+                location.longitude = -3.7038;
+                break;
+            case "ROME_IT":
+                location.latitude = 41.9028;
+                location.longitude = 12.4964;
+                break;
+            case "SEOUL_KR":
+                location.latitude = 37.5665;
+                location.longitude = 126.9780;
+                break;
+            case "HONG KONG_HK":
+                location.latitude = 22.3193;
+                location.longitude = 114.1694;
+                break;
+            case "LOS ANGELES_US":
+                location.latitude = 34.0522;
+                location.longitude = -118.2437;
+                break;
+            case "CHICAGO_US":
+                location.latitude = 41.8781;
+                location.longitude = -87.6298;
+                break;
+            case "BOSTON_US":
+                location.latitude = 42.3601;
+                location.longitude = -71.0589;
+                break;
+            case "MIAMI_US":
+                location.latitude = 25.7617;
+                location.longitude = -80.1918;
+                break;
+            case "KANDY_LK":
+                location.latitude = 7.2906;
+                location.longitude = 80.6337;
+                break;
+            case "GALLE_LK":
+                location.latitude = 6.0535;
+                location.longitude = 80.2210;
+                break;
+            case "NEGOMBO_LK":
+                location.latitude = 7.2008;
+                location.longitude = 79.8358;
+                break;
             default:
                 // Default to approximate coordinates based on country
                 return getCountryCoordinates(country);
         }
         
+        location.locationName = city + ", " + country;
         return location;
     }
     
@@ -451,5 +570,14 @@ public class ImpossibleDistanceServiceImpl implements ImpossibleDistanceService 
         double latitude;
         double longitude;
         String locationName;
+
+        @Override
+        public String toString() {
+            return "LocationData{" +
+                    "latitude=" + latitude +
+                    ", longitude=" + longitude +
+                    ", locationName='" + locationName + '\'' +
+                    '}';
+        }
     }
 }

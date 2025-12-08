@@ -13,6 +13,8 @@ import net.com.fms_core.dto.TransactionHistoryDTO;
 import net.com.fms_core.dto.message.IsoMessageDTO;
 import net.com.fms_core.entity.TransactionHistory;
 import net.com.fms_core.service.TransactionService;
+import net.com.fms_core.service.impl.script.FutureRuleGenerationService;
+import net.com.fms_core.service.impl.script.TransactionExportService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -26,11 +28,16 @@ import java.util.List;
 public class TransactionController {
     private TransactionService tranService;
     private final Sinks.Many<TransactionHistoryDTO> sink;
+    private final TransactionExportService exportService;
+    private final FutureRuleGenerationService ruleService;
+
     @Autowired
     private ObjectMapper objectMapper;
-    public TransactionController(TransactionService tranService, Sinks.Many<TransactionHistoryDTO> sink) {
+    public TransactionController(TransactionService tranService, Sinks.Many<TransactionHistoryDTO> sink, TransactionExportService exportService, FutureRuleGenerationService ruleService) {
         this.tranService = tranService;
         this.sink = sink;
+        this.exportService = exportService;
+        this.ruleService = ruleService;
     }
     @PostMapping("/save-tran")
     public ResponseEntity<ApiResponseDTO> saveTran(@RequestBody List<TransactionHistoryDTO> tranDto){
@@ -74,5 +81,18 @@ public class TransactionController {
     @GetMapping("/get-all-vari-names")
     public ResponseEntity<ApiResponseDTO> getAllVariableNames(){
         return tranService.getAllVariableNames();
+    }
+
+
+    @Autowired
+    private net.com.fms_core.service.impl.script.AIRuleDeploymentService deploymentService;
+
+    @GetMapping("/generate-future-rules")
+    public String generateFutureRules() {
+        String csvPath = "C:\\Users\\kavinda_d\\Documents\\e soft\\final project\\project\\fms backend\\fms_core\\src\\main\\java\\net\\com\\fms_core\\script\\rulegenerator\\transactions.csv";
+        exportService.exportTransactionsToCSV(csvPath);
+        String generatedRules = ruleService.generateRules(csvPath);
+        deploymentService.saveAndDeployRules(generatedRules);
+        return generatedRules;
     }
 }

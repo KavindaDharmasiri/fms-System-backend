@@ -43,7 +43,7 @@ public class GeoService {
             g.setLocation(cleaned);
             g.setLatitude(coords[0]);
             g.setLongitude(coords[1]);
-            g.setUpdatedAt(System.currentTimeMillis());
+//            g.setUpdatedAt(System.currentTimeMillis());
             repo.save(g);
 
             return coords;
@@ -61,11 +61,22 @@ public class GeoService {
 
     private double[] queryApi(String location) {
         try {
-            String url = "https://nominatim.openstreetmap.org/search?format=json&q="
-                    + location + " Sri Lanka";
+            // Parse location: "MERCHANT NAME City CountryCode"
+            String[] parts = location.split("\\s+");
+            String city = "";
+            String country = "";
+            
+            if (parts.length >= 2) {
+                country = parts[parts.length - 1]; // Last part is country code
+                city = parts[parts.length - 2]; // Second last is city
+            } else {
+                city = location;
+            }
+            
+            String query = city + (country.isEmpty() ? "" : ", " + country);
+            String url = "https://nominatim.openstreetmap.org/search?format=json&q=" + query;
 
             RestTemplate rest = new RestTemplate();
-
             var response = rest.getForObject(url, Object[].class);
 
             if (response == null || response.length == 0) {

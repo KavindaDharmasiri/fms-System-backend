@@ -43,6 +43,8 @@ public class TransactionHistory implements Serializable {
     private String status;
     @Column(name = "fraud_percentage")
     private Double fraudPercentage;
+    @Column(name = "block_reason")
+    private String blockReason;
     @Basic(optional = false)
     @Column(name = "created_at")
     @Temporal(TemporalType.TIMESTAMP)
@@ -101,6 +103,12 @@ public class TransactionHistory implements Serializable {
     }
     public void setFraudPercentage(Double fraudPercentage) {
         this.fraudPercentage = fraudPercentage;
+    }
+    public String getBlockReason() {
+        return blockReason;
+    }
+    public void setBlockReason(String blockReason) {
+        this.blockReason = blockReason;
     }
     public Date getCreatedAt() {
         return createdAt;

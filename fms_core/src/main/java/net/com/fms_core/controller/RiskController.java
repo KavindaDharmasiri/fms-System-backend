@@ -106,6 +106,7 @@ public class RiskController {
         return "";
     }
     public String executeTransactions(IsoMessageDTO isoMessageDTO) {
+        System.out.println("1");
         List<IsoMessageDTO> transactionList = new ArrayList<>();
         isoMessageDTO.setTranId((int) isoMessageDTO.getStan());
         isoMessageDTO.setCustomerRiskScore(10);
@@ -116,7 +117,7 @@ public class RiskController {
             log.warn("Transaction validation failed: {}", validationResultDTO.getErrorMessages());
             return "VALIDATION_FAILED";
         }
-        
+        System.out.println("2");
         // 2. Check impossible distance BEFORE rule execution
         ImpossibleDistanceResult distanceResult = impossibleDistanceService.checkImpossibleDistance(isoMessageDTO);
         
@@ -129,6 +130,7 @@ public class RiskController {
                     String percentPart = parts[1].split("%")[0];
                     Double fraudPercentage = Double.parseDouble(percentPart);
                     isoMessageDTO.setFraudPercentage(fraudPercentage);
+                    isoMessageDTO.setBlockReason("IMPOSSIBLE_DISTANCE_DETECTED");
                     log.info("Fraud percentage set: {}%", fraudPercentage);
                 }
             } catch (Exception e) {
