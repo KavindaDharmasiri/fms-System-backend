@@ -134,10 +134,28 @@ public class TransactionServiceImpl implements TransactionService {
                 dto.setTranUuid(tran.getTranUuid());
                 dto.setTranPacket(convertJsonToDto(tran.getTranPacket()));
                 dto.setStatus(tran.getStatus());
+                dto.setBlockReason(tran.getBlockReason());
                 dto.setCreatedAt(tran.getCreatedAt());
                 dto.setUpdatedAt(tran.getUpdatedAt());
                 dto.setCreatedBy(tran.getCreatedBy());
                 dto.setUpdatedBy(tran.getUpdatedBy());
+                
+                // Map flagged rules
+                if (tran.getTransactionFlaggedRulesCollection() != null) {
+                    dto.setTransactionFlaggedRulesCollection(
+                        tran.getTransactionFlaggedRulesCollection().stream()
+                            .map(flagged -> {
+                                TransactionFlaggedRulesDTO flaggedDto = new TransactionFlaggedRulesDTO();
+                                flaggedDto.setTransactionFlaggedRulesId(flagged.getTransactionFlaggedRulesId());
+                                flaggedDto.setRuleName(flagged.getFmsRuleId() != null ? flagged.getFmsRuleId().getRuleName() : null);
+                                flaggedDto.setRuleGroupName(flagged.getRuleGroupId() != null ? flagged.getRuleGroupId().getGroupName() : null);
+                                flaggedDto.setRiskScore(flagged.getRiskScore());
+                                flaggedDto.setFlag(flagged.getFlag());
+                                return flaggedDto;
+                            }).collect(Collectors.toList())
+                    );
+                }
+                
                 return dto;
             }).collect(Collectors.toList());
             return ResponseEntity.status(HttpStatus.OK).body(

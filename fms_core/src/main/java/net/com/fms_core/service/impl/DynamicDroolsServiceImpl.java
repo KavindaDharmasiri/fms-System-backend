@@ -16,7 +16,13 @@ import net.com.fms_core.dto.TransactionEvaluationResult;
 import net.com.fms_core.dto.message.IsoMessageDTO;
 import net.com.fms_core.entity.RiskMetrix;
 import net.com.fms_core.entity.TransactionHistory;
+import net.com.fms_core.entity.FmsRule;
+import net.com.fms_core.entity.RuleGroupRule;
+import net.com.fms_core.entity.TransactionFlaggedRules;
+import net.com.fms_core.repository.FmsRuleRepository;
 import net.com.fms_core.repository.RiskMetrixRepository;
+import net.com.fms_core.repository.RuleGroupRuleRepository;
+import net.com.fms_core.repository.TransactionFlaggedRulesRepository;
 import net.com.fms_core.repository.TransactionRepository;
 import net.com.fms_core.service.DynamicDroolsService;
 import org.kie.api.KieBase;
@@ -42,6 +48,9 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
     private final TransactionController transactionController;
     private final RiskMetrixRepository riskMetrixRepository;
     private final NotificationClient notificationClient;
+    private final FmsRuleRepository fmsRuleRepository;
+    private final RuleGroupRuleRepository ruleGroupRuleRepository;
+    private final TransactionFlaggedRulesRepository transactionFlaggedRulesRepository;
     @Override
     public KieBase loadRulesFromStringList(List<String> rules) {
         try {
@@ -89,19 +98,33 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
     @Override
     public IsoMessageDTO evaluateTransaction(IsoMessageDTO transaction) {
         transaction.setRiskLevel("LOW");
+        List<String> firedRuleNames = new ArrayList<>();
         KieSession kieSession = kieBase.newKieSession();
         kieSession.addEventListener(new DefaultAgendaEventListener() {
             @Override
             public void afterMatchFired(AfterMatchFiredEvent event) {
+                String ruleName = event.getMatch().getRule().getName();
+                firedRuleNames.add(ruleName);
                 System.out.println("Rule fired: " + event.getMatch().getRule());
-                System.out.println("Rule fired name: " + event.getMatch().getRule().getName());
+                System.out.println("Rule fired name: " + ruleName);
             }
         });
         kieSession.insert(transaction);
         int firedRules = kieSession.fireAllRules();
         System.out.println("Number of fired rules: " + firedRules);
+        
+        // Merge with existing fired rules from distance check
+        if (transaction.getFiredRules() != null) {
+            firedRuleNames.addAll(0, transaction.getFiredRules());
+        }
+        transaction.setFiredRules(firedRuleNames);
         System.out.println(transaction.getFiredRules());
-        transaction.setBlockReason(transaction.getFiredRules().get(0).equals("IMPOSSIBLE_DISTANCE_RULE") ? "IMPOSSIBLE_DISTANCE" : "RULE_FIRED");
+        
+        // Set block reason
+        if (!firedRuleNames.isEmpty()) {
+            transaction.setBlockReason(firedRuleNames.contains("Impossible Distance") ? "Impossible Distance" : "Blocked by Rules");
+        }
+        
         kieSession.dispose();
         saveTranHistory(transaction);
         return transaction;
@@ -181,6 +204,30 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
             transactionHistory.setUpdatedBy("admin");
             transactionHistory.setBlockReason(evaluatedTxn.getBlockReason());
             TransactionHistory save = transactionHistoryRepository.save(transactionHistory);
+            
+            // Save fired rules
+            if (evaluatedTxn.getFiredRules() != null && !evaluatedTxn.getFiredRules().isEmpty()) {
+                for (String ruleName : evaluatedTxn.getFiredRules()) {
+                    FmsRule fmsRule = fmsRuleRepository.findByRuleName(ruleName);
+                    if (fmsRule != null) {
+                        RuleGroupRule ruleGroupRule = ruleGroupRuleRepository.findByFmsRuleId(fmsRule);
+                        
+                        TransactionFlaggedRules flaggedRule = new TransactionFlaggedRules();
+                        flaggedRule.setTransactionHistoryId(save);
+                        flaggedRule.setFmsRuleId(fmsRule);
+                        flaggedRule.setRuleGroupId(ruleGroupRule != null ? ruleGroupRule.getRuleGroupId() : null);
+                        flaggedRule.setStatus("FLAGGED");
+                        flaggedRule.setRiskScore(fmsRule.getFinalRiskScore());
+                        flaggedRule.setFlag(finalRiskLevel);
+                        flaggedRule.setCreatedBy("admin");
+                        flaggedRule.setUpdatedBy("admin");
+                        flaggedRule.setCreatedAt(new java.util.Date());
+                        flaggedRule.setUpdatedAt(new java.util.Date());
+                        transactionFlaggedRulesRepository.save(flaggedRule);
+                    }
+                }
+            }
+            
             transactionController.publish(save);
         } catch (Exception e) {
             e.printStackTrace();

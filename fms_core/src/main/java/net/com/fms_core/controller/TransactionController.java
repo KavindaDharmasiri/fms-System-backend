@@ -92,7 +92,14 @@ public class TransactionController {
         String csvPath = "C:\\Users\\kavinda_d\\Documents\\e soft\\final project\\project\\fms backend\\fms_core\\src\\main\\java\\net\\com\\fms_core\\script\\rulegenerator\\transactions.csv";
         exportService.exportTransactionsToCSV(csvPath);
         String generatedRules = ruleService.generateRules(csvPath);
-        deploymentService.saveAndDeployRules(generatedRules);
         return generatedRules;
+    }
+    
+    @GetMapping("/deploy-ai-rules")
+    public String deployAIRules() {
+        String csvPath = "C:\\Users\\kavinda_d\\Documents\\e soft\\final project\\project\\fms backend\\fms_core\\src\\main\\java\\net\\com\\fms_core\\script\\rulegenerator\\transactions.csv";
+        String generatedRules = ruleService.generateRules(csvPath);
+        deploymentService.saveAndDeployRules(generatedRules);
+        return "AI rules deployed successfully";
     }
 }

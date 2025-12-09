@@ -23,6 +23,7 @@ public class TransactionHistoryDTO {
     private String tranUuid;
     private IsoMessageDTO tranPacket;
     private String status;
+    private String blockReason;
     private Date createdAt;
     private Date updatedAt;
     private String createdBy;

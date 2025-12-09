@@ -152,7 +152,7 @@ public class RiskController {
             if (isoMessageDTO.getFiredRules() == null) {
                 isoMessageDTO.setFiredRules(new ArrayList<>());
             }
-            isoMessageDTO.getFiredRules().add("IMPOSSIBLE_DISTANCE_RULE");
+            isoMessageDTO.getFiredRules().add("Impossible Distance");
             
             // Save blocked transaction
             droolsService.evaluateTransaction(isoMessageDTO);

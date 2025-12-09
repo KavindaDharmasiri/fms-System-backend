@@ -25,6 +25,8 @@ public class TransactionFlaggedRulesDTO {
     private String status;
     private Double riskScore;
     private String flag;
+    private String ruleName;
+    private String ruleGroupName;
     private String createdBy;
     private String updatedBy;
     private Integer fmsRuleId;

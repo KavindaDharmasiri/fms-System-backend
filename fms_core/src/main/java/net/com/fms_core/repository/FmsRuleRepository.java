@@ -16,6 +16,8 @@ import java.util.Date;
 
 @Repository
 public interface FmsRuleRepository extends JpaRepository<FmsRule,Integer> {
+    FmsRule findByRuleName(String ruleName);
+    
     @Query(value = "SELECT * FROM fms_rule e WHERE " +
             "(:fmsRuleId IS NULL OR e.fms_rule_id = :fmsRuleId) AND " +
             "(:ruleUuid IS NULL OR e.rule_uuid = :ruleUuid) AND " +
