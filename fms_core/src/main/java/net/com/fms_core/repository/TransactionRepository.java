@@ -12,19 +12,18 @@ import java.util.List;
 @Repository
 public interface TransactionRepository extends JpaRepository<TransactionHistory, Long> {
     
-    @Query("SELECT t FROM TransactionHistory t WHERE " +
-           "CAST(JSON_EXTRACT(t.tranPacket, '$.pan') AS string) LIKE CONCAT(:cardPrefix, '%') " +
-           "ORDER BY t.createdAt DESC")
-    List<TransactionHistory> findRecentTransactionsByCardNumber(
-        @Param("cardPrefix") String cardPrefix, 
-        @Param("fromTime") LocalDateTime fromTime,
-        @Param("currentTime") LocalDateTime currentTime
+    @Query(value = "SELECT * FROM transaction_history t WHERE " +
+           "SUBSTRING(JSON_UNQUOTE(JSON_EXTRACT(t.tran_packet, '$.pan')), 1, 12) = :cardPrefix " +
+           "AND t.created_at >= :fromTime " +
+           "ORDER BY t.created_at DESC LIMIT 10", nativeQuery = true)
+    List<TransactionHistory> findRecentByCard(
+        @Param("cardPrefix") String cardPrefix,
+        @Param("fromTime") LocalDateTime fromTime
     );
     
     default List<TransactionHistory> findRecentTransactionsByCardNumber(String cardPrefix, int hoursBack) {
-        LocalDateTime currentTime = LocalDateTime.now();
-        LocalDateTime fromTime = currentTime.minusHours(hoursBack);
-        return findRecentTransactionsByCardNumber(cardPrefix, fromTime, currentTime);
+        LocalDateTime fromTime = LocalDateTime.now().minusHours(hoursBack);
+        return findRecentByCard(cardPrefix, fromTime);
     }
 
     List<TransactionHistory> findAllByOrderByTransactionHistoryIdDesc();

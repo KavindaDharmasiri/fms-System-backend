@@ -4,6 +4,9 @@ import lombok.RequiredArgsConstructor;
 import net.com.fms_core.dto.message.IsoMessageDTO;
 import net.com.fms_core.service.DynamicDroolsService;
 import org.springframework.web.bind.annotation.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
 
 @RestController
 @RequestMapping("/api/v1/ai-rule-test")
@@ -16,21 +19,48 @@ public class AIRuleTestController {
     @PostMapping("/test-transaction")
     public String testTransaction(@RequestBody TestTransactionRequest request) {
         IsoMessageDTO transaction = new IsoMessageDTO();
+        
+        // Set amounts
         transaction.setAmount(request.getAmount());
         transaction.setTransactionFeeAmount(request.getTransactionFeeAmount());
         transaction.setSettlementFeeAmount(request.getSettlementFeeAmount());
         transaction.setTransactionProcessingFee(request.getTransactionProcessingFee());
         transaction.setSettlementProcessingFee(request.getSettlementProcessingFee());
-        transaction.setPan("4123709999000029");
-        transaction.setStan(123.0);
-        transaction.setMerchantCategoryCode("5999");
         
+        // Set card details
+        transaction.setPan(request.getPan() != null ? request.getPan() : "4123709999000029");
+        transaction.setStan(request.getStan() != null ? request.getStan() : 123.0);
+        transaction.setMerchantCategoryCode(request.getMerchantCategoryCode() != null ? request.getMerchantCategoryCode() : "5999");
+        
+        // Set timestamp (CRITICAL for fraud detection)
+        transaction.setTimestamp(new Date());
+        
+        // Set date/time fields (ISO 8583 standard)
+        LocalDateTime now = LocalDateTime.now();
+        transaction.setTransactionDateTime(now.format(DateTimeFormatter.ofPattern("MMddHHmmss")));
+        transaction.setLocalTransactionTime(now.format(DateTimeFormatter.ofPattern("HHmmss")));
+        transaction.setLocalTransactionDate(now.format(DateTimeFormatter.ofPattern("MMdd")));
+        
+        // Set processing code (default: purchase)
+        transaction.setProcessingCode(request.getProcessingCode() != null ? request.getProcessingCode() : 0);
+        
+        // Set currency codes (default: USD)
+        transaction.setTransactionCurrencyCode(request.getTransactionCurrencyCode() != null ? request.getTransactionCurrencyCode() : "840");
+        transaction.setSettlementCurrencyCode("840");
+        
+        // Set response code (default: approved)
+        transaction.setResponseCode(request.getResponseCode() != null ? request.getResponseCode() : "00");
+        
+        // Set terminal and location
         if (request.getTerminalId() != null) {
             transaction.setTerminalId(request.getTerminalId());
         }
         if (request.getCardAcceptorNameLocation() != null) {
             transaction.setCardAcceptorNameLocation(request.getCardAcceptorNameLocation());
         }
+        
+        // Set POS entry mode (default: chip card)
+        transaction.setPosEntryMode(request.getPosEntryMode() != null ? request.getPosEntryMode() : "05");
         
         return riskController.executeTransactions(transaction);
     }
@@ -85,6 +115,13 @@ public class AIRuleTestController {
         private double settlementProcessingFee;
         private String terminalId;
         private String cardAcceptorNameLocation;
+        private String pan;
+        private Double stan;
+        private String merchantCategoryCode;
+        private Integer processingCode;
+        private String transactionCurrencyCode;
+        private String responseCode;
+        private String posEntryMode;
 
         public double getAmount() { return amount; }
         public void setAmount(double amount) { this.amount = amount; }
@@ -100,5 +137,19 @@ public class AIRuleTestController {
         public void setTerminalId(String terminalId) { this.terminalId = terminalId; }
         public String getCardAcceptorNameLocation() { return cardAcceptorNameLocation; }
         public void setCardAcceptorNameLocation(String cardAcceptorNameLocation) { this.cardAcceptorNameLocation = cardAcceptorNameLocation; }
+        public String getPan() { return pan; }
+        public void setPan(String pan) { this.pan = pan; }
+        public Double getStan() { return stan; }
+        public void setStan(Double stan) { this.stan = stan; }
+        public String getMerchantCategoryCode() { return merchantCategoryCode; }
+        public void setMerchantCategoryCode(String merchantCategoryCode) { this.merchantCategoryCode = merchantCategoryCode; }
+        public Integer getProcessingCode() { return processingCode; }
+        public void setProcessingCode(Integer processingCode) { this.processingCode = processingCode; }
+        public String getTransactionCurrencyCode() { return transactionCurrencyCode; }
+        public void setTransactionCurrencyCode(String transactionCurrencyCode) { this.transactionCurrencyCode = transactionCurrencyCode; }
+        public String getResponseCode() { return responseCode; }
+        public void setResponseCode(String responseCode) { this.responseCode = responseCode; }
+        public String getPosEntryMode() { return posEntryMode; }
+        public void setPosEntryMode(String posEntryMode) { this.posEntryMode = posEntryMode; }
     }
 }

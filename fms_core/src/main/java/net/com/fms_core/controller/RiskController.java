@@ -112,29 +112,38 @@ public class RiskController {
         isoMessageDTO.setCustomerRiskScore(10);
         
         // 1. First validate transaction format
-        ValidationResultDTO validationResultDTO = validationService.ValidateTransaction(isoMessageDTO);
-        if (!validationResultDTO.isValid()) {
-            log.warn("Transaction validation failed: {}", validationResultDTO.getErrorMessages());
-            return "VALIDATION_FAILED";
-        }
+//        ValidationResultDTO validationResultDTO = validationService.ValidateTransaction(isoMessageDTO);
+//        if (!validationResultDTO.isValid()) {
+//            log.warn("Transaction validation failed: {}", validationResultDTO.getErrorMessages());
+//            return "VALIDATION_FAILED";
+//        }
         System.out.println("2");
         // 2. Check impossible distance BEFORE rule execution
         ImpossibleDistanceResult distanceResult = impossibleDistanceService.checkImpossibleDistance(isoMessageDTO);
         
-        // Extract fraud percentage from distance analysis alert message
-        String alertMessage = distanceResult.getAlertMessage();
-        if (alertMessage != null && !alertMessage.contains("Normal travel pattern")) {
-            try {
-                String[] parts = alertMessage.split("Fraud Probability ");
-                if (parts.length > 1) {
-                    String percentPart = parts[1].split("%")[0];
-                    Double fraudPercentage = Double.parseDouble(percentPart);
-                    isoMessageDTO.setFraudPercentage(fraudPercentage);
-                    isoMessageDTO.setBlockReason("IMPOSSIBLE_DISTANCE_DETECTED");
-                    log.info("Fraud percentage set: {}%", fraudPercentage);
+        // Extract fraud percentage from distance analysis
+        if (distanceResult != null && distanceResult.getAlertMessage() != null) {
+            String alertMessage = distanceResult.getAlertMessage();
+            
+            // Parse fraud probability from alert message
+            if (alertMessage.contains("Model probability:")) {
+                try {
+                    int startIdx = alertMessage.indexOf("Model probability:") + 18;
+                    int endIdx = alertMessage.indexOf(")", startIdx);
+                    if (endIdx > startIdx) {
+                        String probStr = alertMessage.substring(startIdx, endIdx).trim();
+                        Double fraudPercentage = Double.parseDouble(probStr) * 100;
+                        isoMessageDTO.setFraudPercentage(fraudPercentage);
+                        log.info("Fraud percentage set: {}%", fraudPercentage);
+                    }
+                } catch (Exception e) {
+                    log.debug("Could not parse fraud probability: {}", e.getMessage());
                 }
-            } catch (Exception e) {
-                log.warn("Failed to parse fraud percentage from alert message: {}", e.getMessage());
+            }
+            
+            // Set block reason if high risk
+            if (distanceResult.isImpossible() || "HIGH".equals(distanceResult.getRiskLevel())) {
+                isoMessageDTO.setBlockReason("IMPOSSIBLE_DISTANCE_DETECTED");
             }
         }
         

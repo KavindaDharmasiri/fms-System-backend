@@ -41,10 +41,8 @@ public class ImpossibleDistanceServiceImpl implements ImpossibleDistanceService 
             }
 
             // Get last transaction for same card within 24 hours
-//            List<TransactionHistory> recentTransactions = transactionRepository
-//                    .findRecentTransactionsByCardNumber(cardNumber.substring(0, 12), 24);
-
-            List<TransactionHistory> recentTransactions = transactionRepository.findAllByOrderByTransactionHistoryIdDesc();
+            List<TransactionHistory> recentTransactions = transactionRepository
+                    .findRecentTransactionsByCardNumber(cardNumber.substring(0, 12), 24);
             System.out.println("Recent transactions found: " + recentTransactions.size());
 
             if (recentTransactions.isEmpty()) {
@@ -74,11 +72,16 @@ public class ImpossibleDistanceServiceImpl implements ImpossibleDistanceService 
             // Calculate distance and time difference
             double distance = calculateDistance(previousLoc.latitude, previousLoc.longitude,
                     currentLoc.latitude, currentLoc.longitude);
-            System.out.println(distance);
+            System.out.println("Distance calculated: " + distance + " km");
+            
+            // Use transaction timestamps, not current time
             LocalDateTime lastTxnTime = lastTransaction.getCreatedAt().toInstant()
                     .atZone(java.time.ZoneId.systemDefault()).toLocalDateTime();
+            LocalDateTime currentTxnTime = currentTransaction.getTimestamp() != null 
+                    ? currentTransaction.getTimestamp().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime()
+                    : LocalDateTime.now();
 
-            long timeDiffMinutes = ChronoUnit.MINUTES.between(lastTxnTime, LocalDateTime.now());
+            long timeDiffMinutes = ChronoUnit.MINUTES.between(lastTxnTime, currentTxnTime);
             if (timeDiffMinutes <= 0) timeDiffMinutes = 1;
 
             double requiredSpeedKmh = (distance / timeDiffMinutes) * 60;
@@ -152,11 +155,13 @@ public class ImpossibleDistanceServiceImpl implements ImpossibleDistanceService 
     @Override
     public boolean isImpossibleTravel(double distance, long timeDiffMinutes, double maxSpeed) {
         if (distance < 1.0) return false; // Same city transactions
+        if (timeDiffMinutes <= 0) return true; // Negative time = fraud
         
         double requiredSpeed = (distance / timeDiffMinutes) * 60;
         
-        // Add 20% buffer for processing delays and route variations
-        double adjustedMaxSpeed = maxSpeed * 1.2;
+        // Use tiered buffer: 10% for flights, 15% for ground transport
+        double buffer = maxSpeed > 500 ? 1.10 : 1.15;
+        double adjustedMaxSpeed = maxSpeed * buffer;
         
         return requiredSpeed > adjustedMaxSpeed;
     }
@@ -166,24 +171,31 @@ public class ImpossibleDistanceServiceImpl implements ImpossibleDistanceService 
             String raw = transaction.getCardAcceptorNameLocation();
 
             if (raw != null && !raw.trim().isEmpty()) {
-
-                // Call Python API through your integration service
-                double[] coords = geoService.getCoordinates(raw);
-
-                if (coords != null && coords.length == 2) {
-                    LocationData loc = new LocationData();
-                    loc.latitude = coords[0];
-                    loc.longitude = coords[1];
-                    loc.locationName = raw;
-                    return loc;
+                // Try GeoService first
+                try {
+                    double[] coords = geoService.getCoordinates(raw);
+                    if (coords != null && coords.length == 2) {
+                        LocationData loc = new LocationData();
+                        loc.latitude = coords[0];
+                        loc.longitude = coords[1];
+                        loc.locationName = raw;
+                        return loc;
+                    }
+                } catch (Exception e) {
+                    log.debug("GeoService failed, trying manual parsing: {}", e.getMessage());
                 }
+                
+                // Fallback to manual parsing
+                LocationData parsed = parseCardAcceptorLocation(raw);
+                if (parsed != null) return parsed;
             }
 
-            return generateDefaultLocation();
+            log.warn("No valid location found, using fallback");
+            return null; // Return null to indicate missing location
 
         } catch (Exception e) {
             log.warn("Location extraction failed: {}", e.getMessage());
-            return generateDefaultLocation();
+            return null;
         }
     }
     

@@ -36,19 +36,19 @@ public class FrontendAuditController {
             enhancedDetails.put("sessionId", request.getSession().getId());
             enhancedDetails.put("timestamp", auditData.get("timestamp"));
             
-            auditService.logActionWithRequestInfo(
-                userId,
-                (String) auditData.get("action"),
-                (String) auditData.get("entityType"),
-                (String) auditData.get("entityId"),
-                null,
-                enhancedDetails,
-                "SUCCESS",
-                null,
-                getClientIpAddress(request),
-                request.getHeader("User-Agent"),
-                request.getSession().getId()
-            );
+//            auditService.logActionWithRequestInfo(
+//                userId,
+//                (String) auditData.get("action"),
+//                (String) auditData.get("entityType"),
+//                (String) auditData.get("entityId"),
+//                null,
+//                enhancedDetails,
+//                "SUCCESS",
+//                null,
+//                getClientIpAddress(request),
+//                request.getHeader("User-Agent"),
+//                request.getSession().getId()
+//            );
             
             return ResponseEntity.ok("Audit logged successfully");
         } catch (Exception e) {

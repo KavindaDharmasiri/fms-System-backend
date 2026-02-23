@@ -375,6 +375,59 @@ public class PythonIntegrationServiceImpl implements PythonIntegrationService {
         String locationName;
     }
     
+    @Override
+    public double[] predictImpossibleTransaction(double distance, long timeDiffMinutes, double requiredSpeed) {
+        try {
+            if (!isPythonAvailable()) {
+                log.warn("Python not available, using rule-based prediction");
+                // Fallback: simple rule-based prediction
+                boolean isImpossible = requiredSpeed > 1080; // 20% over commercial flight
+                double probability = Math.min(requiredSpeed / 1080.0, 1.0);
+                return new double[]{isImpossible ? 1.0 : 0.0, probability};
+            }
+            
+            // Create simple input for Python ML model
+            String jsonInput = String.format(
+                "{\"distance\":%f,\"time_minutes\":%d,\"required_speed\":%f}",
+                distance, timeDiffMinutes, requiredSpeed
+            );
+            
+            Files.write(Paths.get("ml_input.json"), jsonInput.getBytes());
+            
+            // Execute Python ML script
+            String pythonExe = this.pythonExecutablePath != null ? this.pythonExecutablePath : "python";
+            ProcessBuilder pb = new ProcessBuilder(pythonExe, PYTHON_SCRIPT_PATH);
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            
+            boolean finished = process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS);
+            if (!finished) {
+                process.destroyForcibly();
+                log.warn("Python ML prediction timed out");
+                return new double[]{0.0, 0.0};
+            }
+            
+            // Read ML results
+            if (Files.exists(Paths.get(PYTHON_OUTPUT_FILE))) {
+                String jsonContent = new String(Files.readAllBytes(Paths.get(PYTHON_OUTPUT_FILE)));
+                JsonNode results = objectMapper.readTree(jsonContent);
+                
+                double riskScore = results.get("risk_score").asDouble();
+                boolean isImpossible = riskScore > 80;
+                double probability = riskScore / 100.0;
+                
+                return new double[]{isImpossible ? 1.0 : 0.0, probability};
+            }
+            
+        } catch (Exception e) {
+            log.error("Python ML prediction failed: {}", e.getMessage());
+        }
+        
+        // Fallback
+        boolean isImpossible = requiredSpeed > 1080;
+        return new double[]{isImpossible ? 1.0 : 0.0, Math.min(requiredSpeed / 1080.0, 1.0)};
+    }
+    
     private ImpossibleDistanceResult createFallbackResult() {
         return new ImpossibleDistanceResult(
             false, 0.0, 0L, 0.0, 0.0, "LOW", 

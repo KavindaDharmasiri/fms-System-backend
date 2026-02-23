@@ -66,7 +66,7 @@ public class TokenServiceIMPL implements TokenService {
             }
         }
         catch (Exception e){
-            log.error(e.getMessage());
+            e.printStackTrace();
             throw new InternalServerErrorException("Require service unavailable.");
         }
     }

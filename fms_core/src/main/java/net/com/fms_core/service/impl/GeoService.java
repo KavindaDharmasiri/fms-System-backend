@@ -74,9 +74,15 @@ public class GeoService {
             }
             
             String query = city + (country.isEmpty() ? "" : ", " + country);
-            String url = "https://nominatim.openstreetmap.org/search?format=json&q=" + query;
+            String encodedQuery = java.net.URLEncoder.encode(query, "UTF-8");
+            String url = "https://nominatim.openstreetmap.org/search?format=json&q=" + encodedQuery;
 
             RestTemplate rest = new RestTemplate();
+            rest.getInterceptors().add((request, body, execution) -> {
+                request.getHeaders().add("User-Agent", "FMS-FraudDetection/1.0");
+                return execution.execute(request, body);
+            });
+            
             var response = rest.getForObject(url, Object[].class);
 
             if (response == null || response.length == 0) {
