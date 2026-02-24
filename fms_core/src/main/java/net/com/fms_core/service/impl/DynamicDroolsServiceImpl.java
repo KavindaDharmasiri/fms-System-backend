@@ -120,8 +120,8 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
         transaction.setFiredRules(firedRuleNames);
         System.out.println(transaction.getFiredRules());
         
-        // Set block reason
-        if (!firedRuleNames.isEmpty()) {
+        // Set block reason only if not already set by distance check
+        if (!firedRuleNames.isEmpty() && transaction.getBlockReason() == null) {
             transaction.setBlockReason(firedRuleNames.contains("Impossible Distance") ? "Impossible Distance" : "Blocked by Rules");
         }
         
@@ -207,10 +207,20 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
             
             // Save fired rules
             if (evaluatedTxn.getFiredRules() != null && !evaluatedTxn.getFiredRules().isEmpty()) {
+                List<String> triggeredActions = new ArrayList<>();
                 for (String ruleName : evaluatedTxn.getFiredRules()) {
                     FmsRule fmsRule = fmsRuleRepository.findByRuleName(ruleName);
                     if (fmsRule != null) {
                         RuleGroupRule ruleGroupRule = ruleGroupRuleRepository.findByFmsRuleId(fmsRule);
+                        
+                        // Add reaction template to triggered actions
+                        if (ruleGroupRule != null && ruleGroupRule.getRuleGroupId() != null 
+                            && ruleGroupRule.getRuleGroupId().getReactionTemplateId() != null) {
+                            String reactionTemplate = ruleGroupRule.getRuleGroupId().getReactionTemplateId().getTemplateName();
+                            if (!triggeredActions.contains(reactionTemplate)) {
+                                triggeredActions.add(reactionTemplate);
+                            }
+                        }
                         
                         TransactionFlaggedRules flaggedRule = new TransactionFlaggedRules();
                         flaggedRule.setTransactionHistoryId(save);
@@ -226,6 +236,7 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
                         transactionFlaggedRulesRepository.save(flaggedRule);
                     }
                 }
+                evaluatedTxn.setTriggeredActions(triggeredActions);
             }
             
             transactionController.publish(save);

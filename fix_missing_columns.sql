@@ -26,3 +26,11 @@ CREATE TABLE IF NOT EXISTS audit_log (
     user_agent VARCHAR(255),
     user_id VARCHAR(100)
 );
+
+-- Create geo_cache table
+CREATE TABLE IF NOT EXISTS geo_cache (
+    location VARCHAR(255) PRIMARY KEY,
+    latitude DOUBLE NOT NULL,
+    longitude DOUBLE NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);

@@ -1,12 +1,15 @@
 package net.com.fms_core.controller;
 
 import lombok.RequiredArgsConstructor;
+import net.com.fms_core.dto.TransactionTestResultDTO;
 import net.com.fms_core.dto.message.IsoMessageDTO;
 import net.com.fms_core.service.DynamicDroolsService;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/ai-rule-test")
@@ -17,7 +20,7 @@ public class AIRuleTestController {
     private final RiskController riskController;
 
     @PostMapping("/test-transaction")
-    public String testTransaction(@RequestBody TestTransactionRequest request) {
+    public TransactionTestResultDTO testTransaction(@RequestBody TestTransactionRequest request) {
         IsoMessageDTO transaction = new IsoMessageDTO();
         
         // Set amounts
@@ -62,7 +65,39 @@ public class AIRuleTestController {
         // Set POS entry mode (default: chip card)
         transaction.setPosEntryMode(request.getPosEntryMode() != null ? request.getPosEntryMode() : "05");
         
-        return riskController.executeTransactions(transaction);
+        String status = riskController.executeTransactions(transaction);
+        
+        // Build triggered actions from transaction
+        List<TransactionTestResultDTO.TriggeredAction> actions = new ArrayList<>();
+        if (transaction.getTriggeredActions() != null) {
+            for (String action : transaction.getTriggeredActions()) {
+                actions.add(TransactionTestResultDTO.TriggeredAction.builder()
+                    .actionType("REACTION_TEMPLATE")
+                    .actionName(action)
+                    .description("Action triggered by rule group")
+                    .reactionTemplate(action)
+                    .build());
+            }
+        }
+        
+        // Build custom response DTO
+        return TransactionTestResultDTO.builder()
+            .transactionId(String.valueOf(transaction.getStan()))
+            .amount(transaction.getAmount())
+            .pan(maskPan(transaction.getPan()))
+            .riskLevel(transaction.getRiskLevel())
+            .riskScore(transaction.getRiskScore())
+            .fraudPercentage(transaction.getFraudPercentage())
+            .firedRules(transaction.getFiredRules())
+            .triggeredActions(actions)
+            .blockReason(transaction.getBlockReason())
+            .status(status)
+            .build();
+    }
+    
+    private String maskPan(String pan) {
+        if (pan == null || pan.length() < 4) return "****";
+        return "**** **** **** " + pan.substring(pan.length() - 4);
     }
 
     @GetMapping("/test-scenarios")

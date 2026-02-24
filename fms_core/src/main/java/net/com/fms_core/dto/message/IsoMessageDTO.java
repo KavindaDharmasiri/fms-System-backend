@@ -191,6 +191,7 @@ public class IsoMessageDTO {
     private String blockReason;
     private Date timestamp;
     private Double fraudPercentage;
+    private List<String> triggeredActions = new ArrayList<>();
     
     public void setFiredRule(String ruleName) {
         this.firedRules.add(ruleName);

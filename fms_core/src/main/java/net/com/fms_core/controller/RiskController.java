@@ -154,9 +154,19 @@ public class RiskController {
                      distanceResult.getTimeDifferenceMinutes(), 
                      distanceResult.getRequiredSpeedKmh());
             
+            // Set detailed block reason
+            String detailedReason = String.format("Impossible Distance: %.2f km traveled in %d minutes (requires %.2f km/h speed). Previous location: %s, Current location: %s",
+                distanceResult.getDistanceKm(),
+                distanceResult.getTimeDifferenceMinutes(),
+                distanceResult.getRequiredSpeedKmh(),
+                distanceResult.getPreviousLocation(),
+                distanceResult.getCurrentLocation());
+            
             // Set high risk and block transaction
             isoMessageDTO.setRiskLevel("HIGH");
             isoMessageDTO.setRiskScore(100);
+            isoMessageDTO.setBlockReason(detailedReason);
+            
             // Add to fired rules list
             if (isoMessageDTO.getFiredRules() == null) {
                 isoMessageDTO.setFiredRules(new ArrayList<>());
