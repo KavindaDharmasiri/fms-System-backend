@@ -45,6 +45,26 @@ public class TransactionHistory implements Serializable {
     private Double fraudPercentage;
     @Column(name = "block_reason")
     private String blockReason;
+    @Column(name = "action_status")
+    private String actionStatus;
+    @Column(name = "reaction_template_name")
+    private String reactionTemplateName;
+    @Column(name = "sms_enabled")
+    private String smsEnabled;
+    @Column(name = "email_enabled")
+    private String emailEnabled;
+    @Column(name = "frm_enabled")
+    private String frmEnabled;
+    @Column(name = "manual_review_status")
+    private String manualReviewStatus;
+    @Lob
+    @Column(name = "manual_review_reason")
+    private String manualReviewReason;
+    @Column(name = "reviewed_by")
+    private String reviewedBy;
+    @Column(name = "reviewed_at")
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date reviewedAt;
     @Basic(optional = false)
     @Column(name = "created_at")
     @Temporal(TemporalType.TIMESTAMP)
@@ -109,6 +129,60 @@ public class TransactionHistory implements Serializable {
     }
     public void setBlockReason(String blockReason) {
         this.blockReason = blockReason;
+    }
+    public String getActionStatus() {
+        return actionStatus;
+    }
+    public void setActionStatus(String actionStatus) {
+        this.actionStatus = actionStatus;
+    }
+    public String getReactionTemplateName() {
+        return reactionTemplateName;
+    }
+    public void setReactionTemplateName(String reactionTemplateName) {
+        this.reactionTemplateName = reactionTemplateName;
+    }
+    public String getSmsEnabled() {
+        return smsEnabled;
+    }
+    public void setSmsEnabled(String smsEnabled) {
+        this.smsEnabled = smsEnabled;
+    }
+    public String getEmailEnabled() {
+        return emailEnabled;
+    }
+    public void setEmailEnabled(String emailEnabled) {
+        this.emailEnabled = emailEnabled;
+    }
+    public String getFrmEnabled() {
+        return frmEnabled;
+    }
+    public void setFrmEnabled(String frmEnabled) {
+        this.frmEnabled = frmEnabled;
+    }
+    public String getManualReviewStatus() {
+        return manualReviewStatus;
+    }
+    public void setManualReviewStatus(String manualReviewStatus) {
+        this.manualReviewStatus = manualReviewStatus;
+    }
+    public String getManualReviewReason() {
+        return manualReviewReason;
+    }
+    public void setManualReviewReason(String manualReviewReason) {
+        this.manualReviewReason = manualReviewReason;
+    }
+    public String getReviewedBy() {
+        return reviewedBy;
+    }
+    public void setReviewedBy(String reviewedBy) {
+        this.reviewedBy = reviewedBy;
+    }
+    public Date getReviewedAt() {
+        return reviewedAt;
+    }
+    public void setReviewedAt(Date reviewedAt) {
+        this.reviewedAt = reviewedAt;
     }
     public Date getCreatedAt() {
         return createdAt;

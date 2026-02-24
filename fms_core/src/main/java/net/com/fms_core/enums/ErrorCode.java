@@ -22,7 +22,8 @@ public enum ErrorCode {
     UNKNOWN_PATH("UNKNOWN_PATH", "The requested path is unknown"),
     CONSTRAINT_VIOLATION("CONSTRAINT_VIOLATION", "A constraint violation occurred"),
     MALFORMED_REQUEST("MALFORMED_REQUEST", "The request body is malformed or cannot be read"),
-    DATABASE_UNAVAILABLE("DATABASE_UNAVAILABLE", "The database is temporarily unavailable");
+    DATABASE_UNAVAILABLE("DATABASE_UNAVAILABLE", "The database is temporarily unavailable"),
+    NOT_FOUND("NOT_FOUNT", "Data Not Found");
     private final String code;
     private final String defaultMessage;
     ErrorCode(String code, String defaultMessage) {

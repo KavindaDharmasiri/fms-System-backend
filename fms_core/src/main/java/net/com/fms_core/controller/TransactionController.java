@@ -10,6 +10,7 @@ import net.com.fms_core.dto.ApiResponseDTO;
 import net.com.fms_core.dto.RiskManagement.Transaction;
 import net.com.fms_core.dto.TransactionFilterDto;
 import net.com.fms_core.dto.TransactionHistoryDTO;
+import net.com.fms_core.dto.TransactionStatusUpdateDTO;
 import net.com.fms_core.dto.message.IsoMessageDTO;
 import net.com.fms_core.entity.TransactionHistory;
 import net.com.fms_core.service.TransactionService;
@@ -101,5 +102,10 @@ public class TransactionController {
         String generatedRules = ruleService.generateRules(csvPath);
         deploymentService.saveAndDeployRules(generatedRules);
         return "AI rules deployed successfully";
+    }
+    
+    @PutMapping("/update-status")
+    public ResponseEntity<ApiResponseDTO> updateTransactionStatus(@RequestBody TransactionStatusUpdateDTO updateDTO) {
+        return tranService.updateTransactionStatus(updateDTO);
     }
 }

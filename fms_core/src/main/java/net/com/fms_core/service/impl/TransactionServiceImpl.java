@@ -135,6 +135,15 @@ public class TransactionServiceImpl implements TransactionService {
                 dto.setTranPacket(convertJsonToDto(tran.getTranPacket()));
                 dto.setStatus(tran.getStatus());
                 dto.setBlockReason(tran.getBlockReason());
+                dto.setActionStatus(tran.getActionStatus());
+                dto.setReactionTemplateName(tran.getReactionTemplateName());
+                dto.setSmsEnabled(tran.getSmsEnabled());
+                dto.setEmailEnabled(tran.getEmailEnabled());
+                dto.setFrmEnabled(tran.getFrmEnabled());
+                dto.setManualReviewStatus(tran.getManualReviewStatus());
+                dto.setManualReviewReason(tran.getManualReviewReason());
+                dto.setReviewedBy(tran.getReviewedBy());
+                dto.setReviewedAt(tran.getReviewedAt());
                 dto.setCreatedAt(tran.getCreatedAt());
                 dto.setUpdatedAt(tran.getUpdatedAt());
                 dto.setCreatedBy(tran.getCreatedBy());
@@ -188,6 +197,33 @@ public class TransactionServiceImpl implements TransactionService {
         } catch (Exception e) {
             e.printStackTrace();
             return null;
+        }
+    }
+    
+    @Override
+    public ResponseEntity<ApiResponseDTO> updateTransactionStatus(TransactionStatusUpdateDTO updateDTO) {
+        try {
+            TransactionHistory transaction = tranRepo.findByTranUuid(updateDTO.getTransactionUuid());
+            if (transaction == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ApiResponseDTO.error(new ErrorDetailDTO(ErrorCode.NOT_FOUND, "Transaction not found", "Transaction not found"))
+                );
+            }
+            
+            transaction.setManualReviewStatus(updateDTO.getNewStatus());
+            transaction.setManualReviewReason(updateDTO.getReason());
+            transaction.setReviewedBy(updateDTO.getReviewedBy());
+            transaction.setReviewedAt(new Date());
+            tranRepo.save(transaction);
+            
+            return ResponseEntity.status(HttpStatus.OK).body(
+                ApiResponseDTO.success("Transaction status updated successfully")
+            );
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                ApiResponseDTO.error(new ErrorDetailDTO(ErrorCode.INTERNAL_SERVER_ERROR, e.getMessage(), e.getMessage()))
+            );
         }
     }
 }

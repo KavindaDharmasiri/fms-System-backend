@@ -24,6 +24,15 @@ public class TransactionHistoryDTO {
     private IsoMessageDTO tranPacket;
     private String status;
     private String blockReason;
+    private String actionStatus;
+    private String reactionTemplateName;
+    private String smsEnabled;
+    private String emailEnabled;
+    private String frmEnabled;
+    private String manualReviewStatus;
+    private String manualReviewReason;
+    private String reviewedBy;
+    private Date reviewedAt;
     private Date createdAt;
     private Date updatedAt;
     private String createdBy;

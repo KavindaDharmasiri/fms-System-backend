@@ -40,7 +40,7 @@ public class ImpossibleDistanceServiceImpl implements ImpossibleDistanceService 
                 return createNoRiskResult("Invalid card number");
             }
 
-            // Get last transaction for same card within 24 hours
+            // Get all non-blocked transactions for same card within 24 hours
             List<TransactionHistory> recentTransactions = transactionRepository
                     .findRecentTransactionsByCardNumber(cardNumber.substring(0, 12), 24);
             System.out.println("Recent transactions found: " + recentTransactions.size());
@@ -50,12 +50,25 @@ public class ImpossibleDistanceServiceImpl implements ImpossibleDistanceService 
                 return createNoRiskResult("No previous transactions found");
             }
 
-            TransactionHistory lastTransaction = recentTransactions.get(0);
-            IsoMessageDTO lastTxnData = parseTransactionPacket(lastTransaction.getTranPacket());
-            if (lastTxnData == null) {
-                System.out.println("EARLY EXIT: Unable to parse previous transaction");
-                return createNoRiskResult("Unable to parse previous transaction");
+            // Find the most recent NON-BLOCKED transaction to compare against
+            TransactionHistory lastValidTransaction = null;
+            IsoMessageDTO lastTxnData = null;
+            
+            for (TransactionHistory txn : recentTransactions) {
+                IsoMessageDTO parsedTxn = parseTransactionPacket(txn.getTranPacket());
+                if (parsedTxn != null && !"BLOCKED".equals(txn.getActionStatus())) {
+                    lastValidTransaction = txn;
+                    lastTxnData = parsedTxn;
+                    break;
+                }
             }
+            
+            if (lastValidTransaction == null || lastTxnData == null) {
+                System.out.println("EARLY EXIT: No valid previous transactions found");
+                return createNoRiskResult("No valid previous transactions found");
+            }
+            
+            System.out.println("Comparing against last valid transaction (Action: " + lastValidTransaction.getActionStatus() + ")");
 
             // Extract location data
             System.out.println("Extracting locations...");
@@ -75,7 +88,7 @@ public class ImpossibleDistanceServiceImpl implements ImpossibleDistanceService 
             System.out.println("Distance calculated: " + distance + " km");
             
             // Use transaction timestamps, not current time
-            LocalDateTime lastTxnTime = lastTransaction.getCreatedAt().toInstant()
+            LocalDateTime lastTxnTime = lastValidTransaction.getCreatedAt().toInstant()
                     .atZone(java.time.ZoneId.systemDefault()).toLocalDateTime();
             LocalDateTime currentTxnTime = currentTransaction.getTimestamp() != null 
                     ? currentTransaction.getTimestamp().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime()

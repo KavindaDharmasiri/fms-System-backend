@@ -167,8 +167,8 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
     }
     private void saveTranHistory(IsoMessageDTO evaluatedTxn) {
         try {
-            System.out.println(evaluatedTxn.getRiskScore());
-            System.out.println(evaluatedTxn.getFraudPercentage());
+            System.out.println(evaluatedTxn.getRiskScore()+" : risk score");
+            System.out.println(evaluatedTxn.getFraudPercentage()+" : fraud percentage");
 
             if (evaluatedTxn.getFraudPercentage() == null) {
                 evaluatedTxn.setFraudPercentage(0.0);
@@ -178,13 +178,13 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
             String finalRiskLevel = evaluatedTxn.getRiskLevel();
             
             // Only override if fraud percentage is significant
-            if (evaluatedTxn.getFraudPercentage() > 80) {
+            if (evaluatedTxn.getRiskScore() > 40) {
                 finalRiskLevel = "HIGH";
-            } else if (evaluatedTxn.getFraudPercentage() > 60) {
+            } else if (evaluatedTxn.getRiskScore() > 30) {
                 finalRiskLevel = "MID";
             } else if (finalRiskLevel == null || finalRiskLevel.equals("LOW")) {
                 // Use risk matrix only if no rule fired
-                RiskMetrix byRiskValue = riskMetrixRepository.findByRiskValue(evaluatedTxn.getFraudPercentage());
+                RiskMetrix byRiskValue = riskMetrixRepository.findByRiskValue(evaluatedTxn.getRiskScore());
                 finalRiskLevel = byRiskValue != null ? byRiskValue.getFlag() : "LOW";
             }
             
@@ -197,6 +197,14 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
             transactionHistory.setStatus(finalRiskLevel);
             transactionHistory.setFraudPercentage(evaluatedTxn.getFraudPercentage());
             
+            // Set default action_status based on risk level if no rules fired
+            String defaultActionStatus = "ALLOWED";
+            if ("HIGH".equals(finalRiskLevel)) {
+                defaultActionStatus = "BLOCKED";
+            } else if ("MID".equals(finalRiskLevel)) {
+                defaultActionStatus = "REVIEW";
+            }
+            transactionHistory.setActionStatus(defaultActionStatus);
 
             System.out.println(evaluatedTxn.getBlockReason());
             transactionHistory.setTranPacket(getDtoAsJson(evaluatedTxn));
@@ -208,17 +216,43 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
             // Save fired rules
             if (evaluatedTxn.getFiredRules() != null && !evaluatedTxn.getFiredRules().isEmpty()) {
                 List<String> triggeredActions = new ArrayList<>();
+                String finalActionStatus = save.getActionStatus();
+                
                 for (String ruleName : evaluatedTxn.getFiredRules()) {
                     FmsRule fmsRule = fmsRuleRepository.findByRuleName(ruleName);
                     if (fmsRule != null) {
                         RuleGroupRule ruleGroupRule = ruleGroupRuleRepository.findByFmsRuleId(fmsRule);
                         
-                        // Add reaction template to triggered actions
                         if (ruleGroupRule != null && ruleGroupRule.getRuleGroupId() != null 
                             && ruleGroupRule.getRuleGroupId().getReactionTemplateId() != null) {
-                            String reactionTemplate = ruleGroupRule.getRuleGroupId().getReactionTemplateId().getTemplateName();
-                            if (!triggeredActions.contains(reactionTemplate)) {
-                                triggeredActions.add(reactionTemplate);
+                            
+                            var reactionTemplate = ruleGroupRule.getRuleGroupId().getReactionTemplateId();
+                            String reactionStatus = reactionTemplate.getStatus();
+                            
+                            if (!triggeredActions.contains(reactionTemplate.getTemplateName())) {
+                                triggeredActions.add(reactionTemplate.getTemplateName());
+                            }
+                            
+                            // Determine action priority: BLOCKED > REVIEW > ALLOWED
+                            boolean shouldUpdate = false;
+                            if ("BLOCKED".equalsIgnoreCase(reactionStatus) || "BLOCK".equalsIgnoreCase(reactionStatus)) {
+                                finalActionStatus = "BLOCKED";
+                                shouldUpdate = true;
+                            } else if (("REVIEW".equalsIgnoreCase(reactionStatus) || "SEND_MESSAGE".equalsIgnoreCase(reactionStatus)) 
+                                       && !"BLOCKED".equals(finalActionStatus)) {
+                                finalActionStatus = "REVIEW";
+                                shouldUpdate = true;
+                            } else if (save.getReactionTemplateName() == null) {
+                                // If no template set yet, use this one
+                                shouldUpdate = true;
+                            }
+                            
+                            // Copy reaction template data
+                            if (shouldUpdate) {
+                                save.setReactionTemplateName(reactionTemplate.getTemplateName());
+                                save.setSmsEnabled(reactionTemplate.getSmsEnabled());
+                                save.setEmailEnabled(reactionTemplate.getEmailEnabled());
+                                save.setFrmEnabled(reactionTemplate.getFrmEnabled());
                             }
                         }
                         
@@ -236,6 +270,9 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
                         transactionFlaggedRulesRepository.save(flaggedRule);
                     }
                 }
+                
+                save.setActionStatus(finalActionStatus);
+                transactionHistoryRepository.save(save);
                 evaluatedTxn.setTriggeredActions(triggeredActions);
             }
             

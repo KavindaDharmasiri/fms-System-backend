@@ -8,6 +8,7 @@ package net.com.fms_core.service;
 import net.com.fms_core.dto.ApiResponseDTO;
 import net.com.fms_core.dto.TransactionFilterDto;
 import net.com.fms_core.dto.TransactionHistoryDTO;
+import net.com.fms_core.dto.TransactionStatusUpdateDTO;
 import org.springframework.http.ResponseEntity;
 import java.util.List;
 public interface TransactionService {
@@ -15,4 +16,5 @@ public interface TransactionService {
     ResponseEntity<ApiResponseDTO> getAllTran(TransactionFilterDto transactionFilterDto);
     ResponseEntity<ApiResponseDTO> getAllTrans();
     ResponseEntity<ApiResponseDTO> getAllVariableNames();
+    ResponseEntity<ApiResponseDTO> updateTransactionStatus(TransactionStatusUpdateDTO updateDTO);
 }
