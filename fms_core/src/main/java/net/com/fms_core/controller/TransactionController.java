@@ -16,17 +16,24 @@ import net.com.fms_core.entity.TransactionHistory;
 import net.com.fms_core.service.TransactionService;
 import net.com.fms_core.service.impl.script.FutureRuleGenerationService;
 import net.com.fms_core.service.impl.script.TransactionExportService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/tran")
 public class TransactionController {
+    private static final Logger log = LoggerFactory.getLogger(TransactionController.class);
     private TransactionService tranService;
     private final Sinks.Many<TransactionHistoryDTO> sink;
     private final TransactionExportService exportService;
@@ -87,18 +94,46 @@ public class TransactionController {
 
     @Autowired
     private net.com.fms_core.service.impl.script.AIRuleDeploymentService deploymentService;
+    
+    @Autowired
+    private net.com.fms_core.service.impl.script.ProductionRuleGenerationService productionRuleService;
 
-    @GetMapping("/generate-future-rules")
-    public String generateFutureRules() {
-        String csvPath = "C:\\Users\\kavinda_d\\Documents\\e soft\\final project\\project\\fms backend\\fms_core\\src\\main\\java\\net\\com\\fms_core\\script\\rulegenerator\\transactions.csv";
-        exportService.exportTransactionsToCSV(csvPath);
-        String generatedRules = ruleService.generateRules(csvPath);
-        return generatedRules;
+    @PostMapping("/train-fraud-model")
+    public ResponseEntity<Map<String, Object>> trainFraudModel() {
+        try {
+            log.info("Training fraud detection model...");
+            Map<String, Object> result = productionRuleService.trainModel();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+    
+    @PostMapping("/generate-future-rules")
+    public ResponseEntity<Map<String, Object>> generateFutureRules(@RequestBody(required = false) Map<String, Object> params) {
+        try {
+            // Fast rule generation from pre-trained model
+            Map<String, Object> result = productionRuleService.generateRulesFromModel();
+            
+            if (!(Boolean) result.getOrDefault("success", false)) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
+            }
+            
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
     }
     
     @GetMapping("/deploy-ai-rules")
     public String deployAIRules() {
-        String csvPath = "C:\\Users\\kavinda_d\\Documents\\e soft\\final project\\project\\fms backend\\fms_core\\src\\main\\java\\net\\com\\fms_core\\script\\rulegenerator\\transactions.csv";
+        String csvPath = "C:\\Users\\kavinda_d\\Documents\\e soft\\final project\\project\\fms backend\\fms_core\\src\\main\\java\\net\\com\\fms_core\\script\\rulegenerator\\csv\\transactions.csv";
         String generatedRules = ruleService.generateRules(csvPath);
         deploymentService.saveAndDeployRules(generatedRules);
         return "AI rules deployed successfully";

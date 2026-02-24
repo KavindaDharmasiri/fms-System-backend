@@ -178,13 +178,13 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
             String finalRiskLevel = evaluatedTxn.getRiskLevel();
             
             // Only override if fraud percentage is significant
-            if (evaluatedTxn.getRiskScore() > 40) {
+            if (evaluatedTxn.getFraudPercentage() > 40) {
                 finalRiskLevel = "HIGH";
-            } else if (evaluatedTxn.getRiskScore() > 30) {
+            } else if (evaluatedTxn.getFraudPercentage() > 30) {
                 finalRiskLevel = "MID";
             } else if (finalRiskLevel == null || finalRiskLevel.equals("LOW")) {
                 // Use risk matrix only if no rule fired
-                RiskMetrix byRiskValue = riskMetrixRepository.findByRiskValue(evaluatedTxn.getRiskScore());
+                RiskMetrix byRiskValue = riskMetrixRepository.findByRiskValue(evaluatedTxn.getFraudPercentage());
                 finalRiskLevel = byRiskValue != null ? byRiskValue.getFlag() : "LOW";
             }
             

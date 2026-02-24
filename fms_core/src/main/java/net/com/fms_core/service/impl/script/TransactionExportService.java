@@ -43,9 +43,12 @@ public class TransactionExportService {
             for (TransactionHistory txn : transactions) {
                 IsoMessageDTO dto = objectMapper.readValue(txn.getTranPacket(), IsoMessageDTO.class);
                 String ruleName = dto.getRuleName() != null ? dto.getRuleName() : "NO_RULE";
-                String ruleContent = ruleMap.getOrDefault(ruleName, "").replace("\"", "\\\"").replace("\n", " ");
+                String ruleContent = ruleMap.getOrDefault(ruleName, "")
+                    .replace("\"", "")
+                    .replace("\n", " ")
+                    .replace(",", ";");
 
-                String line = String.format("%f,%f,%f,%f,%f,%s,\"%s\"\n",
+                String line = String.format("%f,%f,%f,%f,%f,\"%s\",\"%s\"\n",
                         dto.getAmount() != 0 ? dto.getAmount() : 0.0,
                         dto.getTransactionFeeAmount() != 0 ? dto.getTransactionFeeAmount() : 0.0,
                         dto.getSettlementFeeAmount() != 0 ? dto.getSettlementFeeAmount() : 0.0,

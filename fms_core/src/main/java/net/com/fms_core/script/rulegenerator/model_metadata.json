@@ -1,0 +1,24 @@
+{
+  "trained_at": "2026-02-24T13:46:33.830280",
+  "total_samples": 284807,
+  "fraud_cases": 492,
+  "precision": 0.13494809688581316,
+  "recall": 0.527027027027027,
+  "f1_score": 0.21487603305785122,
+  "feature_names": [
+    "amount",
+    "transactionFeeAmount",
+    "settlementFeeAmount",
+    "transactionProcessingFee",
+    "settlementProcessingFee",
+    "settlementAmount",
+    "cardholderBillingAmount",
+    "cardholderBillingFeeAmount",
+    "stan",
+    "customerRiskScore",
+    "riskScore",
+    "transactionVelocity",
+    "hourOfDay",
+    "geographicRiskScore"
+  ]
+}
