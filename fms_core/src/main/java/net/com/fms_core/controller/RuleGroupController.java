@@ -42,4 +42,9 @@ public class RuleGroupController {
     public SseEmitter testRuleGroup(@RequestBody RuleGroupDTO ruleGroupDTO) {
         return ruleGroupService.testRuleGroup(ruleGroupDTO);
     }
+    
+    @DeleteMapping("/delete-rule-group/{id}")
+    public ResponseEntity<ApiResponseDTO> deleteRuleGroup(@PathVariable Integer id) {
+        return ResponseEntity.ok(ApiResponseDTO.success(ruleGroupService.deleteRuleGroup(id)));
+    }
 }

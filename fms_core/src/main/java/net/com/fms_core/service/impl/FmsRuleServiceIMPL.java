@@ -266,4 +266,21 @@ public class FmsRuleServiceIMPL implements FmsRuleService {
             return null; // Return empty list instead of null
         }
     }
+    
+    @Override
+    public String deleteRule(Integer fmsRuleId) {
+        try {
+            Optional<FmsRule> fmsRule = FmsRuleRepository.findById(fmsRuleId);
+            if (fmsRule.isPresent()) {
+                FmsRuleRepository.deleteById(fmsRuleId);
+                log.info("FMS Rule deleted successfully: {}", fmsRuleId);
+                return "FMS Rule deleted successfully";
+            } else {
+                throw new RuntimeException("FMS Rule not found");
+            }
+        } catch (Exception ex) {
+            log.error("Error deleting FMS rule: {}", ex.getMessage());
+            throw ex;
+        }
+    }
 }

@@ -43,10 +43,14 @@ public class FieldConfiguratorServiceImpl implements FieldConfiguratorService {
     @Transactional
     public ResponseEntity<ApiResponseDTO> saveConfigurator(FmsElementDTO FmsElementDTO) {
         try{
+            // Handle both fmsElementId and efmsElementId field names
+            Integer elementId = FmsElementDTO.getFmsElementId() != null ? 
+                FmsElementDTO.getFmsElementId() : FmsElementDTO.getEfmsElementId();
+            
             FmsElement FmsElement = new FmsElement();
-            if (FmsElementDTO.getFmsElementId() != null && FmsElementDTO.getFmsElementId() != 0) {
+            if (elementId != null && elementId != 0) {
                 try {
-                    FmsElement = FmsElementRepository.findById(FmsElementDTO.getFmsElementId()).get();
+                    FmsElement = FmsElementRepository.findById(elementId).get();
                 }catch (Exception e){
                     return ResponseEntity.status(500).body(ApiResponseDTO.error(ErrorDetailDTO.builder().code(ErrorCode.INTERNAL_SERVER_ERROR).message("Id is not valid.").field("").build()));
                 }
@@ -217,10 +221,8 @@ public class FieldConfiguratorServiceImpl implements FieldConfiguratorService {
     public ResponseEntity<ApiResponseDTO> deletfmsElement(int elemntId) {
         try {
             if (FmsElementRepository.existsById(elemntId)){
-                Optional<FmsElement> byId = FmsElementRepository.findById(elemntId);
-                byId.get().setStatus("DELETED");
-                FmsElementRepository.save(byId.get());
-                return ResponseEntity.ok(ApiResponseDTO.success("Field dependency deleted successfully."));
+                FmsElementRepository.deleteById(elemntId);
+                return ResponseEntity.ok(ApiResponseDTO.success("FMS Element deleted successfully."));
             }else {
                 return ResponseEntity.status(500).body(ApiResponseDTO.error(ErrorDetailDTO.builder().code(ErrorCode.INTERNAL_SERVER_ERROR).message("Id is not valid.").field("").build()));
             }

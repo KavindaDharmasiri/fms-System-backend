@@ -226,4 +226,26 @@ public class TransactionServiceImpl implements TransactionService {
             );
         }
     }
+    
+    @Override
+    public ResponseEntity<ApiResponseDTO> deleteTransaction(Long transactionId) {
+        try {
+            if (!tranRepo.existsById(transactionId)) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ApiResponseDTO.error(new ErrorDetailDTO(ErrorCode.NOT_FOUND, "Transaction not found", "Transaction not found"))
+                );
+            }
+            
+            tranRepo.deleteById(transactionId);
+            
+            return ResponseEntity.status(HttpStatus.OK).body(
+                ApiResponseDTO.success("Transaction deleted successfully")
+            );
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                ApiResponseDTO.error(new ErrorDetailDTO(ErrorCode.INTERNAL_SERVER_ERROR, e.getMessage(), e.getMessage()))
+            );
+        }
+    }
 }

@@ -18,4 +18,5 @@ public interface FmsRuleService {
     Page<FmsRuleDTO> filterFmsRules(FmsRuleDTO FmsRuleDTO, ApiPageReqDTO pageable);
     List<String> getFinalRules();
     SseEmitter testRule(FmsRuleDTO FmsRuleDTO);
+    String deleteRule(Integer fmsRuleId);
 }

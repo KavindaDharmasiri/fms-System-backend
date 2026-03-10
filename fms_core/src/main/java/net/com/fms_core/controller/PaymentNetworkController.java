@@ -30,4 +30,9 @@ public class PaymentNetworkController {
     public ResponseEntity  getPaymentNetworkByID(@RequestParam("paymentNetworkID")int paymentNetworkID){
         return paymentNetworkService.getPaymentNetworkByID(paymentNetworkID);
     }
+    
+    @DeleteMapping("/delete-payment-network/{id}")
+    public ResponseEntity deletePaymentNetwork(@PathVariable("id") int paymentNetworkID){
+        return paymentNetworkService.deletePaymentNetwork(paymentNetworkID);
+    }
 }

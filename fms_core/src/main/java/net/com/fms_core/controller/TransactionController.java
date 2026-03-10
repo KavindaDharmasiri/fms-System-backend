@@ -143,4 +143,9 @@ public class TransactionController {
     public ResponseEntity<ApiResponseDTO> updateTransactionStatus(@RequestBody TransactionStatusUpdateDTO updateDTO) {
         return tranService.updateTransactionStatus(updateDTO);
     }
+    
+    @DeleteMapping("/delete-tran/{id}")
+    public ResponseEntity<ApiResponseDTO> deleteTransaction(@PathVariable Long id) {
+        return tranService.deleteTransaction(id);
+    }
 }

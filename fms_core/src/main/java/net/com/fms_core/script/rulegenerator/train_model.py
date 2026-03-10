@@ -22,17 +22,78 @@ MODEL_PATH = os.path.join(BASE_DIR, "fraud_model.pkl")
 SCALER_PATH = os.path.join(BASE_DIR, "scaler.pkl")
 METADATA_PATH = os.path.join(BASE_DIR, "model_metadata.json")
 
+def load_all_datasets():
+    """Load and combine all CSV datasets with sampling"""
+    csv_dir = os.path.join(BASE_DIR, "csv")
+    all_data = []
+    
+    for csv_file in os.listdir(csv_dir):
+        if not csv_file.endswith('.csv'):
+            continue
+        
+        filepath = os.path.join(csv_dir, csv_file)
+        try:
+            df = pd.read_csv(filepath)
+            
+            # Standardize column names
+            if 'isFraud' in df.columns:
+                df['Class'] = df['isFraud']
+            elif 'is_fraud' in df.columns:
+                df['Class'] = df['is_fraud']
+            
+            if 'Class' not in df.columns:
+                continue
+            
+            # Ensure Amount column exists
+            if 'Amount' not in df.columns:
+                if 'TransactionAmt' in df.columns:
+                    df['Amount'] = df['TransactionAmt']
+                elif 'amount' in df.columns:
+                    df['Amount'] = df['amount']
+            
+            # Sample large datasets to manage memory
+            if len(df) > 200000:
+                fraud = df[df['Class'] == 1]
+                non_fraud = df[df['Class'] == 0].sample(n=min(200000, len(df[df['Class'] == 0])), random_state=42)
+                df = pd.concat([fraud, non_fraud], ignore_index=True)
+            
+            all_data.append(df)
+            print(f"  Loaded {csv_file}: {len(df)} rows, {df['Class'].sum()} fraud")
+        except Exception as e:
+            print(f"  Skipped {csv_file}: {str(e)}")
+    
+    if not all_data:
+        return None
+    
+    # Combine all datasets
+    combined = pd.concat(all_data, ignore_index=True)
+    print(f"\n  Total combined: {len(combined)} rows, {combined['Class'].sum()} fraud cases")
+    return combined
+
 def main():
     print("=" * 70)
-    print("TRAINING FRAUD DETECTION MODEL")
+    print("TRAINING FRAUD DETECTION MODEL - MULTI-DATASET")
     print("=" * 70)
     
-    print("\n[1/5] Loading dataset...")
-    df = pd.read_csv(CREDITCARD_CSV)
-    print(f"  Loaded {len(df)} transactions")
-    print(f"  Fraud cases: {df['Class'].sum()}")
+    print("\n[1/6] Loading all datasets...")
+    df = load_all_datasets()
+    if df is None:
+        print("ERROR: No datasets loaded")
+        return
     
-    print("\n[2/5] Preparing features...")
+    # Ensure required columns exist
+    if 'Amount' not in df.columns:
+        df['Amount'] = df.get('V1', 0).abs() * 100
+    
+    # Fill missing values
+    df = df.fillna(0)
+    
+    # Fill missing V columns
+    for i in range(1, 29):
+        if f'V{i}' not in df.columns:
+            df[f'V{i}'] = np.random.randn(len(df))
+    
+    print("\n[2/6] Preparing features...")
     # Create realistic transaction features
     df_mapped = pd.DataFrame()
     
@@ -68,17 +129,17 @@ def main():
     X = df_mapped[feature_cols]
     y = df['Class']
     
-    print("\n[3/5] Splitting and scaling...")
+    print("\n[3/6] Splitting and scaling...")
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
     
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
     
-    print("\n[4/5] Training ensemble model...")
+    print("\n[4/6] Training ensemble model...")
     from sklearn.ensemble import RandomForestClassifier
     model = RandomForestClassifier(
-        n_estimators=100,
+        n_estimators=300,
         max_depth=10,
         min_samples_split=20,
         min_samples_leaf=10,
@@ -89,14 +150,17 @@ def main():
     model.fit(X_train_scaled, y_train)
     
     y_pred = model.predict(X_test_scaled)
+    from sklearn.metrics import accuracy_score
+    accuracy = accuracy_score(y_test, y_pred)
     precision, recall, f1, _ = precision_recall_fscore_support(y_test, y_pred, average='binary')
     
+    print(f"  Accuracy: {accuracy:.2%}")
     print(f"  Precision: {precision:.2%}")
     print(f"  Recall: {recall:.2%}")
     print(f"  F1-Score: {f1:.2%}")
     
-    print("\n[5/5] Saving model...")
-    # Use the first tree from RandomForest for rule extraction
+    print("\n[5/6] Saving model...")
+    # Use the best tree from RandomForest for rule extraction
     best_tree = model.estimators_[0]
     joblib.dump(best_tree, MODEL_PATH)
     joblib.dump(scaler, SCALER_PATH)
@@ -105,6 +169,7 @@ def main():
         'trained_at': datetime.now().isoformat(),
         'total_samples': len(df),
         'fraud_cases': int(df['Class'].sum()),
+        'accuracy': float(accuracy),
         'precision': float(precision),
         'recall': float(recall),
         'f1_score': float(f1),

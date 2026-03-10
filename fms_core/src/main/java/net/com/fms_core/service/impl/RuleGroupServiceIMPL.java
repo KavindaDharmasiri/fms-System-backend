@@ -203,4 +203,21 @@ public class RuleGroupServiceIMPL implements RuleGroupService {
             return null;
         }
     }
+    
+    @Override
+    public String deleteRuleGroup(Integer ruleGroupId) {
+        try {
+            Optional<RuleGroup> ruleGroup = ruleGroupRepository.findById(ruleGroupId);
+            if (ruleGroup.isPresent()) {
+                ruleGroupRepository.deleteById(ruleGroupId);
+                log.info("Rule Group deleted successfully: {}", ruleGroupId);
+                return "Rule Group deleted successfully";
+            } else {
+                throw new RuntimeException("Rule Group not found");
+            }
+        } catch (Exception ex) {
+            log.error("Error deleting rule group: {}", ex.getMessage());
+            throw ex;
+        }
+    }
 }

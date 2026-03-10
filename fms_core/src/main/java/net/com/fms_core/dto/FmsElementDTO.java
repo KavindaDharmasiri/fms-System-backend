@@ -22,6 +22,7 @@ import java.util.Date;
 @AllArgsConstructor
 public class FmsElementDTO {
     private Integer fmsElementId;
+    private Integer efmsElementId; // Alternative field name for frontend compatibility
     private Integer paymentNetworkId;
     private String networkName;
     private String elementCode;

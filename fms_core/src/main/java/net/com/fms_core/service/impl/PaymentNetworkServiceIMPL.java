@@ -119,4 +119,25 @@ public class PaymentNetworkServiceIMPL implements PaymentNetworkService {
             throw new InternalServerErrorException("Error occurred in get payment network.");
         }
     }
+    
+    @Override
+    public ResponseEntity deletePaymentNetwork(int paymentNetworkID) {
+        try {
+            Optional<PaymentNetwork> byId = paymentNetworkRepository.findById(paymentNetworkID);
+            if (byId.isPresent()){
+                paymentNetworkRepository.deleteById(paymentNetworkID);
+                log.info("::::Payment Network Deleted - {} - {}.", paymentNetworkID, byId.get().getNetworkName());
+                return new ResponseEntity(ApiResponseDTO.success("Payment Network deleted successfully"), HttpStatus.OK);
+            }else {
+                throw new NotFoundException("Payment Network not found.");
+            }
+        }
+        catch (NotFoundException e){
+            throw e;
+        }
+        catch (Exception e){
+            log.error(e.getMessage());
+            throw new InternalServerErrorException("Error occurred in delete payment network.");
+        }
+    }
 }

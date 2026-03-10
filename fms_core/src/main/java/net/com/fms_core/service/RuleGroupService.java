@@ -16,4 +16,5 @@ public interface RuleGroupService {
     RuleGroupDTO getRuleGroup(Integer ruleGroupId);
     Page<RuleGroupDTO> filterRuleGroups(RuleGroupDTO ruleGroupDTO, ApiPageReqDTO pageable);
     SseEmitter testRuleGroup(RuleGroupDTO ruleGroupDTO);
+    String deleteRuleGroup(Integer ruleGroupId);
 }

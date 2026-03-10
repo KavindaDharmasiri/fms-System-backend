@@ -156,8 +156,7 @@ public class ReactionTemplateServiceImpl implements ReactionTemplateService {
     public ResponseEntity<ApiResponseDTO> deleteReactionTemplateById(int temId) {
         try {
             Optional<ReactionTemplate> byId = reactionTemplateRepository.findById(temId);
-            byId.get().setStatus("DELETED");
-            reactionTemplateRepository.save(byId.get());
+            reactionTemplateRepository.delete(byId.get());
             return ResponseEntity.ok(ApiResponseDTO.success("Deleted"));
         }catch (Exception e){
             e.printStackTrace();

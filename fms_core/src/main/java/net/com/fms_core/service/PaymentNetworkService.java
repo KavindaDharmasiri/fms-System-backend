@@ -12,4 +12,5 @@ public interface PaymentNetworkService {
     ResponseEntity addPaymentNetwork(AddPaymentNetworkDTO addPaymentNetworkDTO);
     ResponseEntity listPaymentNetwork(ListPaymentNetworkRequestDTO listPaymentNetworkRequestDTO);
     ResponseEntity getPaymentNetworkByID(int paymentNetworkID);
+    ResponseEntity deletePaymentNetwork(int paymentNetworkID);
 }

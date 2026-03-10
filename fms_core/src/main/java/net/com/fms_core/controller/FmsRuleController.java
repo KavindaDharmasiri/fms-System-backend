@@ -45,4 +45,9 @@ public class FmsRuleController {
     public SseEmitter testRule(@RequestBody FmsRuleDTO FmsRuleDTO) {
         return FmsRuleService.testRule(FmsRuleDTO);
     }
+    
+    @DeleteMapping("/delete-rule/{id}")
+    public ResponseEntity<ApiResponseDTO> deleteRule(@PathVariable Integer id) {
+        return ResponseEntity.ok(ApiResponseDTO.success(FmsRuleService.deleteRule(id)));
+    }
 }

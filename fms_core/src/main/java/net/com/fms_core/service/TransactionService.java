@@ -17,4 +17,5 @@ public interface TransactionService {
     ResponseEntity<ApiResponseDTO> getAllTrans();
     ResponseEntity<ApiResponseDTO> getAllVariableNames();
     ResponseEntity<ApiResponseDTO> updateTransactionStatus(TransactionStatusUpdateDTO updateDTO);
+    ResponseEntity<ApiResponseDTO> deleteTransaction(Long transactionId);
 }

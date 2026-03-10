@@ -18,4 +18,5 @@ public interface FmsElementRepository extends JpaRepository<FmsElement,Integer>,
      List<FmsElement> findAllByStatus(String active);
      Page<FmsElement> findAllByStatusNot(String active, Pageable pageable);
     boolean existsByElementName(String elementName);
+    boolean existsByElementNameAndFmsElementIdNot(String elementName, Integer fmsElementId);
 }
