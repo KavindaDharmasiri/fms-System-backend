@@ -131,12 +131,28 @@ public class TransactionController {
         }
     }
     
+    @PostMapping("/deploy-ai-rules")
+    public ResponseEntity<Map<String, Object>> deployAIRules() {
+        try {
+            String csvPath = "C:\\Users\\kavinda_d\\Documents\\e soft\\final project\\project\\fms backend\\fms_core\\src\\main\\java\\net\\com\\fms_core\\script\\rulegenerator\\csv\\transactions.csv";
+            String generatedRules = ruleService.generateRules(csvPath);
+            deploymentService.saveAndDeployRules(generatedRules);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "AI rules deployed successfully to AI KIE base");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+    
     @GetMapping("/deploy-ai-rules")
-    public String deployAIRules() {
-        String csvPath = "C:\\Users\\kavinda_d\\Documents\\e soft\\final project\\project\\fms backend\\fms_core\\src\\main\\java\\net\\com\\fms_core\\script\\rulegenerator\\csv\\transactions.csv";
-        String generatedRules = ruleService.generateRules(csvPath);
-        deploymentService.saveAndDeployRules(generatedRules);
-        return "AI rules deployed successfully";
+    public ResponseEntity<Map<String, Object>> deployAIRulesGet() {
+        return deployAIRules();
     }
     
     @PutMapping("/update-status")

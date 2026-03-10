@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.com.fms_core.entity.*;
 import net.com.fms_core.repository.*;
+import net.com.fms_core.service.impl.AIKieService;
 import org.springframework.stereotype.Service;
 
 import java.io.FileWriter;
@@ -16,18 +17,16 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class AIRuleDeploymentService {
 
-    private final FmsRuleRepository fmsRuleRepository;
-    private final PaymentNetworkRepository paymentNetworkRepository;
-    private final RuleGroupRepository ruleGroupRepository;
-    private final RuleGroupRuleRepository ruleGroupRuleRepository;
-    private final ReactionTemplateRepository reactionTemplateRepository;
+    private final AIRuleRepository aiRuleRepository;
+    private final AIRuleGroupRepository aiRuleGroupRepository;
+    private final AIKieService aiKieService;
 
     public void saveAndDeployRules(String rulesContent) {
-        // Create rule group
-        RuleGroup ruleGroup = createRuleGroup();
-        if (ruleGroup == null) return;
+        // Create AI rule group
+        AIRuleGroup aiRuleGroup = createAIRuleGroup();
+        if (aiRuleGroup == null) return;
         
-        List<FmsRule> savedRules = new ArrayList<>();
+        List<AIRule> savedRules = new ArrayList<>();
         String[] individualRules = rulesContent.split("import net.com.fms_core.dto.message.IsoMessageDTO;");
         
         for (String ruleText : individualRules) {
@@ -37,17 +36,15 @@ public class AIRuleDeploymentService {
             String ruleName = extractRuleName(fullRule);
             
             if (ruleName != null) {
-                FmsRule rule = saveToDB(ruleName, fullRule);
+                AIRule rule = saveAIRuleToDB(ruleName, fullRule, aiRuleGroup);
                 if (rule != null) {
                     savedRules.add(rule);
                 }
             }
         }
         
-        // Add rules to group
-        addRulesToGroup(ruleGroup, savedRules);
-        
-        deployToKieBase(rulesContent);
+        // Deploy to AI KIE base
+        deployToAIKieBase(savedRules);
     }
 
     private String extractRuleName(String ruleText) {
@@ -59,139 +56,99 @@ public class AIRuleDeploymentService {
         return null;
     }
 
-    private RuleGroup createRuleGroup() {
+    private AIRuleGroup createAIRuleGroup() {
         try {
             String groupName = "AI_Generated_Rules_" + System.currentTimeMillis();
+            String groupCode = "AI_GEN_" + System.currentTimeMillis();
             
             // Check if group exists
-            RuleGroup existingGroup = ruleGroupRepository.findAll().stream()
+            AIRuleGroup existingGroup = aiRuleGroupRepository.findAll().stream()
                     .filter(g -> g.getGroupName().equals(groupName))
                     .findFirst()
                     .orElse(null);
             
             if (existingGroup != null) {
-                log.info("Rule group already exists: {}", groupName);
+                log.info("AI rule group already exists: {}", groupName);
                 return existingGroup;
             }
             
-            PaymentNetwork defaultNetwork = paymentNetworkRepository.findAll().stream()
-                    .findFirst()
-                    .orElseThrow(() -> new RuntimeException("No payment network found"));
+            AIRuleGroup aiRuleGroup = new AIRuleGroup();
+            aiRuleGroup.setGroupName(groupName);
+            aiRuleGroup.setGroupCode(groupCode);
+            aiRuleGroup.setDescription("AI Generated Rule Group");
+            aiRuleGroup.setPriority(1);
+            aiRuleGroup.setStatus(true);
+            aiRuleGroup.setIsDeployed(false);
+            aiRuleGroup.setCreatedBy("AI_SYSTEM");
+            aiRuleGroup.setUpdatedBy("AI_SYSTEM");
             
-            ReactionTemplate defaultTemplate = reactionTemplateRepository.findAll().stream()
-                    .findFirst()
-                    .orElseThrow(() -> new RuntimeException("No reaction template found"));
-            
-            RuleGroup ruleGroup = new RuleGroup();
-            ruleGroup.setRuleGroupUuid(UUID.randomUUID().toString());
-            ruleGroup.setGroupName(groupName);
-            ruleGroup.setVerdict("BLOCK");
-            ruleGroup.setStatus("ACTIVE");
-            ruleGroup.setPaymentNetworkId(defaultNetwork);
-            ruleGroup.setReactionTemplateId(defaultTemplate);
-            ruleGroup.setCreatedAt(new Date());
-            ruleGroup.setUpdatedAt(new Date());
-            ruleGroup.setCreatedBy("AI_SYSTEM");
-            ruleGroup.setUpdatedBy("AI_SYSTEM");
-            
-            ruleGroup = ruleGroupRepository.save(ruleGroup);
+            aiRuleGroup = aiRuleGroupRepository.save(aiRuleGroup);
             log.info("Created AI rule group: {}", groupName);
-            return ruleGroup;
+            return aiRuleGroup;
         } catch (Exception e) {
-            log.error("Failed to create rule group: {}", e.getMessage());
+            log.error("Failed to create AI rule group: {}", e.getMessage());
             return null;
         }
     }
 
-    private FmsRule saveToDB(String ruleName, String ruleContent) {
+    private AIRule saveAIRuleToDB(String ruleName, String ruleContent, AIRuleGroup aiRuleGroup) {
         try {
             // Check if rule already exists
-            FmsRule existingRule = fmsRuleRepository.findAll().stream()
+            AIRule existingRule = aiRuleRepository.findAll().stream()
                     .filter(r -> r.getRuleName().equals(ruleName))
                     .findFirst()
                     .orElse(null);
 
             if (existingRule != null) {
-                log.info("Rule already exists in database, skipping: {}", ruleName);
+                log.info("AI rule already exists in database, skipping: {}", ruleName);
                 return existingRule;
             }
 
-            PaymentNetwork defaultNetwork = paymentNetworkRepository.findAll().stream()
-                    .findFirst()
-                    .orElseThrow(() -> new RuntimeException("No payment network found"));
+            String ruleCode = "AI_" + ruleName.replaceAll("[^a-zA-Z0-9]", "_").toUpperCase();
+            
+            AIRule aiRule = new AIRule();
+            aiRule.setRuleName(ruleName);
+            aiRule.setRuleCode(ruleCode);
+            aiRule.setDescription("AI Generated Rule");
+            aiRule.setDroolRule(ruleContent);
+            aiRule.setPriority(1);
+            aiRule.setStatus(true);
+            aiRule.setIsDeployed(false);
+            aiRule.setAiRuleGroup(aiRuleGroup);
+            aiRule.setCreatedBy("AI_SYSTEM");
+            aiRule.setUpdatedBy("AI_SYSTEM");
 
-            FmsRule rule = new FmsRule();
-            rule.setRuleUuid(UUID.randomUUID().toString());
-            rule.setRuleName(ruleName);
-            rule.setDescription("AI Generated Rule");
-            rule.setStatus("ACTIVE");
-            rule.setFinalRiskScore(7.0);
-            rule.setFinalRule(ruleContent);
-            rule.setPaymentNetworkId(defaultNetwork);
-            rule.setCreatedAt(new Date());
-            rule.setUpdatedAt(new Date());
-            rule.setCreatedBy("AI_SYSTEM");
-            rule.setUpdatedBy("AI_SYSTEM");
-
-            rule = fmsRuleRepository.save(rule);
+            aiRule = aiRuleRepository.save(aiRule);
             log.info("Saved AI rule to database: {}", ruleName);
-            return rule;
+            return aiRule;
         } catch (Exception e) {
-            log.error("Failed to save rule {}: {}", ruleName, e.getMessage());
+            log.error("Failed to save AI rule {}: {}", ruleName, e.getMessage());
             return null;
         }
     }
     
-    private void addRulesToGroup(RuleGroup ruleGroup, List<FmsRule> rules) {
-        try {
-            for (FmsRule rule : rules) {
-                // Check if rule already in group
-                boolean exists = ruleGroupRuleRepository.findAll().stream()
-                        .anyMatch(rgr -> rgr.getRuleGroupId().getRuleGroupId().equals(ruleGroup.getRuleGroupId()) 
-                                && rgr.getFmsRuleId().getFmsRuleId().equals(rule.getFmsRuleId()));
-                
-                if (exists) {
-                    log.info("Rule already in group, skipping: {}", rule.getRuleName());
-                    continue;
-                }
-                
-                RuleGroupRule ruleGroupRule = new RuleGroupRule();
-                ruleGroupRule.setRuleGroupId(ruleGroup);
-                ruleGroupRule.setFmsRuleId(rule);
-                ruleGroupRule.setStatus("ACTIVE");
-                ruleGroupRule.setCreatedAt(new Date());
-                ruleGroupRule.setUpdatedAt(new Date());
-                ruleGroupRule.setCreatedBy("AI_SYSTEM");
-                ruleGroupRule.setUpdatedBy("AI_SYSTEM");
-                
-                ruleGroupRuleRepository.save(ruleGroupRule);
-            }
-            log.info("Added {} rules to group: {}", rules.size(), ruleGroup.getGroupName());
-        } catch (Exception e) {
-            log.error("Failed to add rules to group: {}", e.getMessage());
-        }
-    }
 
-    private void deployToKieBase(String rulesContent) {
+
+    private void deployToAIKieBase(List<AIRule> aiRules) {
         try {
-            String rulesPath = "fms_core/src/main/resources/rules/ai-generated-rules.drl";
-            java.io.File file = new java.io.File(rulesPath);
+            // Automatically deploy to AI KIE base immediately after saving
+            aiKieService.deployAIRules(aiRules);
             
-            // Check if file already exists
-            if (file.exists()) {
-                log.info("AI rules file already exists at {}, skipping file creation", rulesPath);
-                return;
+            // Mark rules and group as deployed
+            aiRules.forEach(rule -> {
+                rule.setIsDeployed(true);
+                aiRuleRepository.save(rule);
+            });
+            
+            if (!aiRules.isEmpty()) {
+                AIRuleGroup group = aiRules.get(0).getAiRuleGroup();
+                group.setIsDeployed(true);
+                aiRuleGroupRepository.save(group);
             }
             
-            file.getParentFile().mkdirs();
-            
-            try (FileWriter writer = new FileWriter(file)) {
-                writer.write(rulesContent);
-            }
-            log.info("Successfully saved AI rules to {}", rulesPath);
-            log.info("Restart application to load new rules into KieBase");
+            log.info("Successfully auto-deployed {} AI rules to AI KIE base", aiRules.size());
         } catch (Exception e) {
-            log.error("Failed to save rules file: {}", e.getMessage(), e);
+            log.error("Failed to auto-deploy AI rules to KIE base: {}", e.getMessage(), e);
         }
     }
 }

@@ -18,6 +18,10 @@ spring:
           dialect: org.hibernate.dialect.MySQL8Dialect # Use MySQL 8 dialect
       open-in-view: false # Disable Open Session in View to avoid potential performance issues
 
+  devtools:
+    restart:
+      enabled: false
+
 server:
   port: 8084
   servlet:

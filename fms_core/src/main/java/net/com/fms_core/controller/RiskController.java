@@ -66,6 +66,7 @@ public class RiskController {
                 .distinct()
                 .collect(Collectors.toList());
         System.out.println("rulesList.size = " + rulesList.size());
+        log.info("rulesList.size = " + rulesList.size());
         droolsService.loadRulesFromStringList(rulesList);
         long endTime = System.currentTimeMillis();
         long duration = endTime - startTime;

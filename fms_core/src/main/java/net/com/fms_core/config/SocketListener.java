@@ -9,6 +9,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.com.fms_core.controller.RiskController;
 import net.com.fms_core.dto.message.IsoMessageDTO;
+import net.com.fms_core.entity.AIRule;
+import net.com.fms_core.repository.AIRuleRepository;
+import net.com.fms_core.service.impl.AIKieService;
 import net.com.fms_core.util.SocketMethods;
 import org.jpos.iso.ISOMsg;
 import org.jpos.iso.ISOUtil;
@@ -21,6 +24,8 @@ import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.List;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -28,12 +33,16 @@ public class SocketListener implements CommandLineRunner {
     private final RiskController riskController;
     private final SocketMethods SocketMethods;
     private final ConfigurableApplicationContext applicationContext;
+    private final AIRuleRepository aiRuleRepository;
+    private final AIKieService aiKieService;
+
     int port = 5000;
     @Override
     public void run(String... args) {
         try (ServerSocket serverSocket = new ServerSocket()) {
             serverSocket.bind(new InetSocketAddress("0.0.0.0", port));
             riskController.setRules();
+            initializeAIRules();
             log.info("✅ FMS Receiver is listening on port {}", port);
             while (true) {
                 Socket socket = serverSocket.accept();
@@ -44,6 +53,22 @@ public class SocketListener implements CommandLineRunner {
             log.error("❌ Error in FMS Receiver: {}", e.getMessage(), e);
         }
     }
+
+    private void initializeAIRules() {
+        try {
+            List<AIRule> deployedAIRules = aiRuleRepository.findDeployedRulesOrderByPriority();
+            if (!deployedAIRules.isEmpty()) {
+                aiKieService.deployAIRules(deployedAIRules);
+                System.out.println("Initialized AI KIE base with " + deployedAIRules.size() + " deployed AI rules");
+            } else {
+                System.out.println("No deployed AI rules found - AI KIE base initialized with default rule");
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to initialize AI rules: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
     private void handleClient(Socket socket) {
         try (DataInputStream input = new DataInputStream(socket.getInputStream())) {
             while (true) {

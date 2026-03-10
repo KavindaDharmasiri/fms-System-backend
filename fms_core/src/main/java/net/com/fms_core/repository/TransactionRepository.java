@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 
 @Repository
@@ -28,4 +29,5 @@ public interface TransactionRepository extends JpaRepository<TransactionHistory,
 
     List<TransactionHistory> findAllByOrderByTransactionHistoryIdDesc();
     TransactionHistory findByTranUuid(String tranUuid);
+    List<TransactionHistory> findByCreatedAtBetween(Date startDate, Date endDate);
 }
