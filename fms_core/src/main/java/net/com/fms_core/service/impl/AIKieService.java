@@ -67,6 +67,13 @@ public class AIKieService {
     
     public void deployAIRules(List<AIRule> aiRules) {
         try {
+            // Clear existing AI KIE container
+            if (aiKieContainer != null) {
+                aiKieContainer.dispose();
+                aiKieContainer = null;
+                log.info("Cleared existing AI KIE container");
+            }
+            
             KieFileSystem kieFileSystem = kieServices.newKieFileSystem();
             
             // Add each AI rule to the KIE file system
@@ -84,9 +91,9 @@ public class AIKieService {
                 throw new RuntimeException("Failed to build AI rules");
             }
             
-            // Update the AI KIE container
+            // Create new AI KIE container with fresh rules
             aiKieContainer = kieServices.newKieContainer(kieBuilder.getKieModule().getReleaseId());
-            System.out.println("Deployed {} AI rules successfully "+ aiRules.size());
+            log.info("Deployed {} AI rules successfully", aiRules.size());
             
         } catch (Exception e) {
             log.error("Failed to deploy AI rules", e);
@@ -136,5 +143,15 @@ public class AIKieService {
     
     public boolean isAIKieBaseReady() {
         return aiKieContainer != null;
+    }
+    
+    public void clearAIRules() {
+        if (aiKieContainer != null) {
+            aiKieContainer.dispose();
+            aiKieContainer = null;
+            log.info("AI KIE container cleared");
+        }
+        // Reinitialize with default rule
+        initializeAIKieBase();
     }
 }

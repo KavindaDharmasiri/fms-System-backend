@@ -51,6 +51,8 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
     private final FmsRuleRepository fmsRuleRepository;
     private final RuleGroupRuleRepository ruleGroupRuleRepository;
     private final TransactionFlaggedRulesRepository transactionFlaggedRulesRepository;
+    private final AIKieService aiKieService;
+    private final AIToggleService aiToggleService;
     @Override
     public KieBase loadRulesFromStringList(List<String> rules) {
         try {
@@ -99,19 +101,27 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
     public IsoMessageDTO evaluateTransaction(IsoMessageDTO transaction) {
         transaction.setRiskLevel("LOW");
         List<String> firedRuleNames = new ArrayList<>();
+        
+        // Evaluate manual rules
         KieSession kieSession = kieBase.newKieSession();
         kieSession.addEventListener(new DefaultAgendaEventListener() {
             @Override
             public void afterMatchFired(AfterMatchFiredEvent event) {
                 String ruleName = event.getMatch().getRule().getName();
                 firedRuleNames.add(ruleName);
-                System.out.println("Rule fired: " + event.getMatch().getRule());
-                System.out.println("Rule fired name: " + ruleName);
+                System.out.println("Manual rule fired: " + ruleName);
             }
         });
         kieSession.insert(transaction);
         int firedRules = kieSession.fireAllRules();
-        System.out.println("Number of fired rules: " + firedRules);
+        System.out.println("Number of manual rules fired: " + firedRules);
+        kieSession.dispose();
+        
+        // Evaluate AI rules if enabled
+        if (aiToggleService.isAIRulesEnabled() && aiKieService.isAIKieBaseReady()) {
+            System.out.println("Evaluating AI rules...");
+            transaction = aiKieService.evaluateWithAIRules(transaction);
+        }
         
         // Merge with existing fired rules from distance check
         if (transaction.getFiredRules() != null) {
@@ -125,7 +135,6 @@ public class DynamicDroolsServiceImpl implements DynamicDroolsService {
             transaction.setBlockReason(firedRuleNames.contains("Impossible Distance") ? "Impossible Distance" : "Blocked by Rules");
         }
         
-        kieSession.dispose();
         saveTranHistory(transaction);
         return transaction;
     }
