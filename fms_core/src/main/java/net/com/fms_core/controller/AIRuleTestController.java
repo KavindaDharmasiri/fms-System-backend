@@ -33,8 +33,10 @@ public class AIRuleTestController {
         // Set card details
         transaction.setPan(request.getPan() != null ? request.getPan() : "4123709999000029");
         transaction.setStan(request.getStan() != null ? request.getStan() : 123.0);
+        System.out.println("-------------------------------------------------");
+        System.out.println(request.getMerchantCategoryCode());
         transaction.setMerchantCategoryCode(request.getMerchantCategoryCode() != null ? request.getMerchantCategoryCode() : "5999");
-        
+        System.out.println(transaction.getMerchantCategoryCode());
         // Set timestamp (CRITICAL for fraud detection)
         transaction.setTimestamp(new Date());
         

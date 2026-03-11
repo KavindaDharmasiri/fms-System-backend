@@ -192,6 +192,8 @@ public class IsoMessageDTO {
     private Date timestamp;
     private Double fraudPercentage;
     private List<String> triggeredActions = new ArrayList<>();
+    private String status; // Transaction status (APPROVED, BLOCKED, MANUAL_REVIEW, FLAGGED)
+    private Double transactionVelocity; // Transaction velocity for fraud detection
     
     public void setFiredRule(String ruleName) {
         this.firedRules.add(ruleName);
@@ -255,5 +257,26 @@ public class IsoMessageDTO {
     
     public void setFraudPercentage(Double fraudPercentage) {
         this.fraudPercentage = fraudPercentage;
+    }
+    
+    public String getStatus() {
+        return this.status;
+    }
+    
+    public void setStatus(String status) {
+        this.status = status;
+    }
+    
+    public Double getTransactionVelocity() {
+        return this.transactionVelocity;
+    }
+    
+    public void setTransactionVelocity(Double transactionVelocity) {
+        this.transactionVelocity = transactionVelocity;
+    }
+    
+    // Convenience method for rules that expect primitive double
+    public double transactionVelocity() {
+        return this.transactionVelocity != null ? this.transactionVelocity : 0.0;
     }
 }

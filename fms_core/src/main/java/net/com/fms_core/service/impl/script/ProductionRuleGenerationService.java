@@ -216,8 +216,97 @@ public class ProductionRuleGenerationService {
         }
     }
     
+    public Map<String, Object> generateAdvancedMLRules() {
+        StringBuilder rulesContent = new StringBuilder();
+        StringBuilder metadataContent = new StringBuilder();
+        List<String> output = new ArrayList<>();
+        
+        String pythonCommand = "python";
+        String scriptPath = "C:\\Users\\kavinda_d\\Documents\\e soft\\final project\\project\\fms backend\\fms_core\\src\\main\\java\\net\\com\\fms_core\\script\\rulegenerator\\pretrained_rule_generator.py";
+        
+        try {
+            log.info("Generating advanced ML-based rules with trained models...");
+            
+            ProcessBuilder pb = new ProcessBuilder(pythonCommand, scriptPath);
+            pb.directory(new java.io.File("C:\\Users\\kavinda_d\\Documents\\e soft\\final project\\project\\fms backend\\fms_core\\src\\main\\java\\net\\com\\fms_core\\script\\rulegenerator"));
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            boolean captureRules = false;
+            boolean captureMetadata = false;
+            
+            while ((line = reader.readLine()) != null) {
+                output.add(line);
+                
+                if (line.equals("===RULES_START===")) {
+                    captureRules = true;
+                    continue;
+                }
+                if (line.equals("===RULES_END===")) {
+                    captureRules = false;
+                    continue;
+                }
+                if (captureRules) {
+                    rulesContent.append(line).append("\n");
+                }
+                
+                if (line.equals("===METADATA_START===")) {
+                    captureMetadata = true;
+                    continue;
+                }
+                if (line.equals("===METADATA_END===")) {
+                    captureMetadata = false;
+                    continue;
+                }
+                if (captureMetadata) {
+                    metadataContent.append(line).append("\n");
+                }
+            }
+
+            int exitCode = process.waitFor();
+            log.info("Advanced ML rule generation completed with exit code: {}", exitCode);
+            
+            Map<String, Object> metadata = new HashMap<>();
+            List<Map<String, Object>> rules = new ArrayList<>();
+            
+            try {
+                if (metadataContent.length() > 0) {
+                    metadata = objectMapper.readValue(metadataContent.toString(), Map.class);
+                }
+                if (rulesContent.length() > 0) {
+                    rules = objectMapper.readValue(rulesContent.toString(), List.class);
+                }
+            } catch (Exception e) {
+                log.warn("Could not parse JSON: {}", e.getMessage());
+            }
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("rules", rules);
+            response.put("metadata", metadata);
+            response.put("output", output);
+            response.put("success", exitCode == 0);
+            response.put("generatedAt", new Date());
+            response.put("ruleType", "ADVANCED_ML");
+            
+            return response;
+
+        } catch (Exception e) {
+            log.error("Failed to generate advanced ML rules: {}", e.getMessage(), e);
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("error", e.getMessage());
+            errorResponse.put("output", output);
+            
+            return errorResponse;
+        }
+    }
+    
     public String generateRulesOnly(String csvPath) {
         Map<String, Object> result = generateAdvancedRules(csvPath);
         return (String) result.getOrDefault("rules", "Error: No rules generated");
     }
 }
+
