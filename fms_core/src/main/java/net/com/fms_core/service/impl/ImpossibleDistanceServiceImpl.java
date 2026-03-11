@@ -56,7 +56,11 @@ public class ImpossibleDistanceServiceImpl implements ImpossibleDistanceService 
             
             for (TransactionHistory txn : recentTransactions) {
                 IsoMessageDTO parsedTxn = parseTransactionPacket(txn.getTranPacket());
-                if (parsedTxn != null && !"BLOCKED".equals(txn.getActionStatus())) {
+                if (parsedTxn != null && 
+                    !"BLOCKED".equals(txn.getActionStatus()) && 
+                    !"BLOCKED".equals(txn.getStatus()) &&
+                    !"BLOCKED_IMPOSSIBLE_DISTANCE".equals(txn.getStatus()) &&
+                    txn.getBlockReason() == null) { // Additional safety check
                     lastValidTransaction = txn;
                     lastTxnData = parsedTxn;
                     break;

@@ -167,6 +167,7 @@ public class RiskController {
             isoMessageDTO.setRiskLevel("HIGH");
             isoMessageDTO.setRiskScore(100);
             isoMessageDTO.setBlockReason(detailedReason);
+            isoMessageDTO.setStatus("BLOCKED");
             
             // Add to fired rules list
             if (isoMessageDTO.getFiredRules() == null) {
@@ -174,8 +175,10 @@ public class RiskController {
             }
             isoMessageDTO.getFiredRules().add("Impossible Distance");
             
-            // Save blocked transaction
-            droolsService.evaluateTransaction(isoMessageDTO);
+            // DON'T save blocked impossible distance transactions to avoid future confusion
+            // droolsService.evaluateTransaction(isoMessageDTO); // ← REMOVED
+            
+            log.warn("Transaction blocked for impossible distance - NOT saved to database");
             return "BLOCKED_IMPOSSIBLE_DISTANCE";
         }
         log.info("Distance: {}km, Time: {}min, Required Speed: {}km/h",
@@ -192,7 +195,9 @@ public class RiskController {
             isoMessageDTO.setCustomerRiskScore(isoMessageDTO.getCustomerRiskScore() + 10);
         }
         
-        // 4. Proceed with normal rule execution
+        log.info("Transaction passed impossible distance check - proceeding with normal processing");
+        
+        // 4. Proceed with normal rule execution for valid transactions
         transactionList.add(isoMessageDTO);
         long startTime = System.currentTimeMillis();
         List<CompletableFuture<Void>> tasks = new ArrayList<>();
