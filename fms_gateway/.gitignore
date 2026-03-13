@@ -31,3 +31,26 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Data Files ###
+# Machine Learning Models and Data Files
+*.pkl
+*.pickle
+*.csv
+*.json.bak
+*.data
+*.model
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

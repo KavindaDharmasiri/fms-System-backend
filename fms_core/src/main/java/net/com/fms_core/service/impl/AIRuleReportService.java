@@ -23,6 +23,9 @@ public class AIRuleReportService {
 
     @Autowired
     private AIRulePDFReportService pdfReportService;
+    
+    @Autowired
+    private AIRuleJasperReportService jasperReportService;
 
     public byte[] generateDetailedExcelReport(List<AIRuleTestResultDTO> testResults, 
                                             String ruleGroupName, 
@@ -61,6 +64,44 @@ public class AIRuleReportService {
                                                LocalDateTime startDate, 
                                                LocalDateTime endDate) throws IOException {
         return pdfReportService.generateComprehensiveTextReport(testResults, ruleGroupName, startDate, endDate);
+    }
+    
+    /**
+     * Generate PDF report using JasperReports
+     */
+    public byte[] generateJasperPDFReport(List<AIRuleTestResultDTO> testResults, 
+                                        String ruleGroupName) throws IOException {
+        try {
+            String reportTitle = "AI Rule Testing & Validation Report - " + ruleGroupName;
+            return jasperReportService.generateJasperPDFReport(testResults, reportTitle);
+        } catch (Exception e) {
+            log.error("Error generating JasperReports PDF", e);
+            throw new IOException("Failed to generate JasperReports PDF", e);
+        }
+    }
+    
+    /**
+     * Generate detailed analysis report using JasperReports
+     */
+    public byte[] generateDetailedJasperReport(List<AIRuleTestResultDTO> testResults) throws IOException {
+        try {
+            return jasperReportService.generateDetailedAnalysisReport(testResults);
+        } catch (Exception e) {
+            log.error("Error generating detailed JasperReports PDF", e);
+            throw new IOException("Failed to generate detailed JasperReports PDF", e);
+        }
+    }
+    
+    /**
+     * Generate executive summary using JasperReports
+     */
+    public byte[] generateExecutiveJasperReport(List<AIRuleTestResultDTO> testResults) throws IOException {
+        try {
+            return jasperReportService.generateExecutiveSummaryReport(testResults);
+        } catch (Exception e) {
+            log.error("Error generating executive JasperReports PDF", e);
+            throw new IOException("Failed to generate executive JasperReports PDF", e);
+        }
     }
     
     private void createSummarySheet(Workbook workbook, List<AIRuleTestResultDTO> testResults, 

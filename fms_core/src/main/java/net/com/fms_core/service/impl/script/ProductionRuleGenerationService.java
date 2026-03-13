@@ -227,6 +227,12 @@ public class ProductionRuleGenerationService {
         try {
             log.info("Generating advanced ML-based rules with trained models...");
             
+            // Check if Python script exists
+            java.io.File scriptFile = new java.io.File(scriptPath);
+            if (!scriptFile.exists()) {
+                throw new Exception("Python script not found at: " + scriptPath);
+            }
+            
             ProcessBuilder pb = new ProcessBuilder(pythonCommand, scriptPath);
             pb.directory(new java.io.File("C:\\Users\\kavinda_d\\Documents\\e soft\\final project\\project\\fms backend\\fms_core\\src\\main\\java\\net\\com\\fms_core\\script\\rulegenerator"));
             pb.redirectErrorStream(true);
@@ -239,6 +245,7 @@ public class ProductionRuleGenerationService {
             
             while ((line = reader.readLine()) != null) {
                 output.add(line);
+                log.debug("Python output: {}", line);
                 
                 if (line.equals("===RULES_START===")) {
                     captureRules = true;
@@ -268,18 +275,32 @@ public class ProductionRuleGenerationService {
             int exitCode = process.waitFor();
             log.info("Advanced ML rule generation completed with exit code: {}", exitCode);
             
+            if (exitCode != 0) {
+                log.error("Python script failed with exit code: {}. Output: {}", exitCode, output);
+                throw new Exception("Python script execution failed with exit code: " + exitCode + ". Check logs for details.");
+            }
+            
             Map<String, Object> metadata = new HashMap<>();
             List<Map<String, Object>> rules = new ArrayList<>();
             
             try {
                 if (metadataContent.length() > 0) {
                     metadata = objectMapper.readValue(metadataContent.toString(), Map.class);
+                    log.info("Successfully parsed metadata with {} entries", metadata.size());
+                } else {
+                    log.warn("No metadata content captured from Python script");
                 }
                 if (rulesContent.length() > 0) {
                     rules = objectMapper.readValue(rulesContent.toString(), List.class);
+                    log.info("Successfully parsed {} rules from Python script", rules.size());
+                } else {
+                    log.warn("No rules content captured from Python script");
                 }
             } catch (Exception e) {
-                log.warn("Could not parse JSON: {}", e.getMessage());
+                log.error("Failed to parse JSON output from Python script: {}", e.getMessage());
+                log.debug("Rules content: {}", rulesContent.toString());
+                log.debug("Metadata content: {}", metadataContent.toString());
+                throw new Exception("Failed to parse Python script output: " + e.getMessage());
             }
             
             Map<String, Object> response = new HashMap<>();
@@ -294,11 +315,13 @@ public class ProductionRuleGenerationService {
 
         } catch (Exception e) {
             log.error("Failed to generate advanced ML rules: {}", e.getMessage(), e);
+            log.error("Python script output: {}", output);
             
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
             errorResponse.put("error", e.getMessage());
             errorResponse.put("output", output);
+            errorResponse.put("details", "Check if Python is installed and all required packages are available");
             
             return errorResponse;
         }

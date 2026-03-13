@@ -108,6 +108,75 @@ public class AIRuleController {
         }
     }
     
+    @PostMapping("/test/download-jasper-pdf-report")
+    public ResponseEntity<byte[]> downloadJasperPDFReport(@RequestBody AIRuleTestReportRequest reportRequest) {
+        try {
+            // Generate JasperReports PDF
+            byte[] reportData = reportService.generateJasperPDFReport(
+                reportRequest.getTestResults(),
+                reportRequest.getRuleGroupName()
+            );
+            
+            // Generate filename with timestamp
+            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+            String filename = String.format("AI_Rule_Jasper_Report_%s_%s.pdf", 
+                reportRequest.getRuleGroupName().replaceAll("[^a-zA-Z0-9]", "_"), timestamp);
+            
+            return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PDF_VALUE)
+                .body(reportData);
+                
+        } catch (Exception e) {
+            log.error("Error generating JasperReports PDF", e);
+            return ResponseEntity.status(500).build();
+        }
+    }
+    
+    @PostMapping("/test/download-detailed-jasper-report")
+    public ResponseEntity<byte[]> downloadDetailedJasperReport(@RequestBody AIRuleTestReportRequest reportRequest) {
+        try {
+            // Generate detailed JasperReports PDF
+            byte[] reportData = reportService.generateDetailedJasperReport(reportRequest.getTestResults());
+            
+            // Generate filename with timestamp
+            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+            String filename = String.format("AI_Rule_Detailed_Analysis_%s_%s.pdf", 
+                reportRequest.getRuleGroupName().replaceAll("[^a-zA-Z0-9]", "_"), timestamp);
+            
+            return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PDF_VALUE)
+                .body(reportData);
+                
+        } catch (Exception e) {
+            log.error("Error generating detailed JasperReports PDF", e);
+            return ResponseEntity.status(500).build();
+        }
+    }
+    
+    @PostMapping("/test/download-executive-jasper-report")
+    public ResponseEntity<byte[]> downloadExecutiveJasperReport(@RequestBody AIRuleTestReportRequest reportRequest) {
+        try {
+            // Generate executive summary JasperReports PDF
+            byte[] reportData = reportService.generateExecutiveJasperReport(reportRequest.getTestResults());
+            
+            // Generate filename with timestamp
+            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+            String filename = String.format("AI_Rule_Executive_Summary_%s_%s.pdf", 
+                reportRequest.getRuleGroupName().replaceAll("[^a-zA-Z0-9]", "_"), timestamp);
+            
+            return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PDF_VALUE)
+                .body(reportData);
+                
+        } catch (Exception e) {
+            log.error("Error generating executive JasperReports PDF", e);
+            return ResponseEntity.status(500).build();
+        }
+    }
+    
     @GetMapping("/deployed")
     public ResponseEntity<ApiResponseDTO> getDeployedAIRules() {
         return aiRuleService.getDeployedAIRules();
