@@ -1,1 +1,0 @@
-ALTER TABLE transaction_history ADD COLUMN fraud_percentage DOUBLE NULL;
