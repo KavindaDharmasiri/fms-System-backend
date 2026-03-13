@@ -13,6 +13,8 @@ public interface AIRuleRepository extends JpaRepository<AIRule, Integer> {
     
     List<AIRule> findByStatusTrue();
     
+    long countByStatusTrue();
+    
     List<AIRule> findByIsDeployedTrue();
     
     List<AIRule> findByAiRuleGroupAiRuleGroupIdAndStatusTrue(Integer aiRuleGroupId);

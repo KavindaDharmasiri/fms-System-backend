@@ -1,6 +1,7 @@
 package net.com.fms_core.controller;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.com.fms_core.dto.AIRuleDTO;
 import net.com.fms_core.dto.AIRuleGroupDTO;
 import net.com.fms_core.dto.AIRuleTestRequestDTO;
@@ -18,6 +19,7 @@ import java.time.format.DateTimeFormatter;
 @RestController
 @RequestMapping("/api/v1/ai-rules")
 @RequiredArgsConstructor
+@Slf4j
 public class AIRuleController {
     
     private final AIRuleService aiRuleService;
@@ -75,6 +77,33 @@ public class AIRuleController {
                 .body(reportData);
                 
         } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
+    }
+    
+    @PostMapping("/test/download-pdf-report")
+    public ResponseEntity<byte[]> downloadPDFTestReport(@RequestBody AIRuleTestReportRequest reportRequest) {
+        try {
+            // Generate the comprehensive text report
+            byte[] reportData = reportService.generateComprehensivePDFReport(
+                reportRequest.getTestResults(),
+                reportRequest.getRuleGroupName(),
+                reportRequest.getStartDate(),
+                reportRequest.getEndDate()
+            );
+            
+            // Generate filename with timestamp
+            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+            String filename = String.format("AI_Rule_Comprehensive_Report_%s_%s.txt", 
+                reportRequest.getRuleGroupName().replaceAll("[^a-zA-Z0-9]", "_"), timestamp);
+            
+            return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header(HttpHeaders.CONTENT_TYPE, "text/plain; charset=UTF-8")
+                .body(reportData);
+                
+        } catch (Exception e) {
+            log.error("Error generating comprehensive report", e);
             return ResponseEntity.status(500).build();
         }
     }

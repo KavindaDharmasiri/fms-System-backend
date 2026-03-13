@@ -30,4 +30,17 @@ public interface TransactionRepository extends JpaRepository<TransactionHistory,
     List<TransactionHistory> findAllByOrderByTransactionHistoryIdDesc();
     TransactionHistory findByTranUuid(String tranUuid);
     List<TransactionHistory> findByCreatedAtBetween(Date startDate, Date endDate);
+    
+    // Additional methods for dashboard analytics
+    long countByCreatedAtBetween(Date startDate, Date endDate);
+    long countByStatusAndCreatedAtBetween(String status, Date startDate, Date endDate);
+    
+    @Query("SELECT COUNT(t) FROM TransactionHistory t WHERE t.status = 'FLAGGED' AND t.createdAt BETWEEN :startDate AND :endDate")
+    long countFlaggedTransactionsBetween(@Param("startDate") Date startDate, @Param("endDate") Date endDate);
+    
+    @Query("SELECT COUNT(t) FROM TransactionHistory t WHERE t.actionStatus = 'BLOCKED' AND t.createdAt BETWEEN :startDate AND :endDate")
+    long countBlockedTransactionsBetween(@Param("startDate") Date startDate, @Param("endDate") Date endDate);
+    
+    @Query("SELECT t FROM TransactionHistory t WHERE (t.status = 'FLAGGED' OR t.actionStatus = 'BLOCKED') AND t.createdAt BETWEEN :startDate AND :endDate")
+    List<TransactionHistory> findFraudTransactionsBetween(@Param("startDate") Date startDate, @Param("endDate") Date endDate);
 }

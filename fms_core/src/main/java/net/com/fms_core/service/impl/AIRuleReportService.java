@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.com.fms_core.dto.AIRuleTestResultDTO;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -19,6 +20,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class AIRuleReportService {
+
+    @Autowired
+    private AIRulePDFReportService pdfReportService;
 
     public byte[] generateDetailedExcelReport(List<AIRuleTestResultDTO> testResults, 
                                             String ruleGroupName, 
@@ -50,6 +54,13 @@ public class AIRuleReportService {
             log.error("Error generating Excel report", e);
             throw new IOException("Failed to generate Excel report", e);
         }
+    }
+    
+    public byte[] generateComprehensivePDFReport(List<AIRuleTestResultDTO> testResults, 
+                                               String ruleGroupName, 
+                                               LocalDateTime startDate, 
+                                               LocalDateTime endDate) throws IOException {
+        return pdfReportService.generateComprehensiveTextReport(testResults, ruleGroupName, startDate, endDate);
     }
     
     private void createSummarySheet(Workbook workbook, List<AIRuleTestResultDTO> testResults, 
