@@ -109,15 +109,33 @@ class AIRuleJasperReportServiceTest {
 
     @Test
     void testGenerateExecutiveSummaryReport() {
-        // Test executive summary report generation
-        byte[] pdfBytes = jasperReportService.generateExecutiveSummaryReport(testResults);
-        
-        assertNotNull(pdfBytes);
-        assertTrue(pdfBytes.length > 0);
-        
-        // Check PDF header
-        String pdfHeader = new String(pdfBytes, 0, Math.min(4, pdfBytes.length));
-        assertEquals("%PDF", pdfHeader);
+        try {
+            // Test executive summary report generation
+            byte[] pdfBytes = jasperReportService.generateExecutiveSummaryReport(testResults);
+            
+            assertNotNull(pdfBytes);
+            assertTrue(pdfBytes.length > 0);
+            
+            // Check PDF header
+            String pdfHeader = new String(pdfBytes, 0, Math.min(4, pdfBytes.length));
+            assertEquals("%PDF", pdfHeader);
+            
+        } catch (RuntimeException e) {
+            // If templates have validation errors, provide useful information
+            if (e.getMessage().contains("Failed to generate executive summary")) {
+                System.out.println("Template validation failed - this indicates JRXML schema issues");
+                System.out.println("Error: " + e.getMessage());
+                
+                // Check if it's a schema validation error
+                if (e.getCause() != null && e.getCause().getMessage().contains("cvc-complex-type")) {
+                    fail("JRXML template has XML schema validation errors. Please fix the template structure.");
+                } else {
+                    fail("Executive summary generation failed: " + e.getMessage());
+                }
+            } else {
+                throw e;
+            }
+        }
     }
 
     @Test

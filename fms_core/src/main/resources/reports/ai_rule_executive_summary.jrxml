@@ -313,6 +313,18 @@
         </band>
     </summary>
 
+    <noData>
+        <band height="50">
+            <staticText>
+                <reportElement x="0" y="10" width="555" height="30"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="14" isBold="true"/>
+                </textElement>
+                <text><![CDATA[No data available for this report]]></text>
+            </staticText>
+        </band>
+    </noData>
+
     <pageFooter>
         <band height="30" splitType="Stretch">
             <line>

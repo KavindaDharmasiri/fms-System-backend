@@ -7,7 +7,7 @@ spring:
         native:
           searchLocations: classpath:configs/,classpath:configs/{application}
   profiles:
-    active: native # Use the "native" profile for local file-based configurations
+    active: native 
 
 server:
   port: 8888
