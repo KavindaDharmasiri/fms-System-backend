@@ -9,9 +9,6 @@ import net.com.fms_core.repository.geo.GeoCacheRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.net.http.HttpClient;
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 /**
@@ -54,25 +51,35 @@ public class GeoService {
 
     private String clean(String text) {
         if (text == null) return "";
-        text = text.trim();
-        text = text.replaceAll(" +", " ");
-        return text;
+        return text.trim().replaceAll(" +", " ").toLowerCase();
     }
+
+    // Common country code aliases to normalize before geocoding
+    private static final Map<String, String> COUNTRY_ALIASES = Map.of(
+        "sl", "Sri Lanka",
+        "lk", "Sri Lanka",
+        "us", "United States",
+        "uk", "United Kingdom",
+        "gb", "United Kingdom",
+        "in", "India",
+        "au", "Australia"
+    );
 
     private double[] queryApi(String location) {
         try {
-            // Parse location: "MERCHANT NAME City CountryCode"
-            String[] parts = location.split("\\s+");
+            // Parse location: "MERCHANT NAME     City     CountryCode"
+            String[] parts = location.trim().split("\\s+");
             String city = "";
             String country = "";
-            
+
             if (parts.length >= 2) {
-                country = parts[parts.length - 1]; // Last part is country code
-                city = parts[parts.length - 2]; // Second last is city
+                String rawCountry = parts[parts.length - 1].toLowerCase();
+                country = COUNTRY_ALIASES.getOrDefault(rawCountry, parts[parts.length - 1]);
+                city = parts[parts.length - 2];
             } else {
                 city = location;
             }
-            
+
             String query = city + (country.isEmpty() ? "" : ", " + country);
             String encodedQuery = java.net.URLEncoder.encode(query, "UTF-8");
             String url = "https://nominatim.openstreetmap.org/search?format=json&q=" + encodedQuery;
@@ -82,7 +89,7 @@ public class GeoService {
                 request.getHeaders().add("User-Agent", "FMS-FraudDetection/1.0");
                 return execution.execute(request, body);
             });
-            
+
             var response = rest.getForObject(url, Object[].class);
 
             if (response == null || response.length == 0) {
